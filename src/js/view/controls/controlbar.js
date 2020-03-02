@@ -91,6 +91,7 @@ export default class Controlbar {
         this._api = _api;
         this._model = _model;
         this._isMobile = OS.mobile;
+        this._isTizenApp = _model.get('isTizenApp');
         this._volumeAnnouncer = _accessibilityContainer.querySelector('.jw-volume-update');
         const localization = _model.get('localization');
         const timeSlider = new TimeSlider(_model, _api, _accessibilityContainer.querySelector('.jw-time-update'));
@@ -103,8 +104,8 @@ export default class Controlbar {
 
         const vol = localization.volume;
 
-        // Do not initialize volume slider or tooltip on mobile
-        if (!this._isMobile) {
+        // Do not initialize volume slider or tooltip on mobile or tizen app
+        if (!this._isMobile && !this._isTizenApp) {
             horizontalVolumeContainer = document.createElement('div');
             horizontalVolumeContainer.className = 'jw-horizontal-volume-container';
 
@@ -148,6 +149,10 @@ export default class Controlbar {
         }, localization.liveBroadcast);
         liveButton.element().textContent = localization.liveBroadcast;
 
+        const fullscreenButton = !this._isTizenApp && button('jw-icon-fullscreen', () => {
+            _api.setFullscreen();
+        }, localization.fullscreen, cloneIcons('fullscreen-off,fullscreen-on'));
+
         const elements = this.elements = {
             alt: text('jw-text-alt', 'status'),
             play: button('jw-icon-playback', () => {
@@ -168,9 +173,7 @@ export default class Controlbar {
             cast: createCastButton(() => {
                 _api.castToggle();
             }, localization),
-            fullscreen: button('jw-icon-fullscreen', () => {
-                _api.setFullscreen();
-            }, localization.fullscreen, cloneIcons('fullscreen-off,fullscreen-on')),
+            fullscreen: fullscreenButton,
             spacer: div('jw-spacer'),
             buttonContainer: div('jw-button-container'),
             settingsButton,
@@ -211,7 +214,8 @@ export default class Controlbar {
         setAttribute(nextElement, 'dir', 'auto');
         SimpleTooltip(elements.rewind.element(), 'rewind', localization.rewind);
         SimpleTooltip(elements.settingsButton.element(), 'settings', localization.settings);
-        const fullscreenTip = SimpleTooltip(elements.fullscreen.element(), 'fullscreen', localization.fullscreen);
+        const fullscreenTip = elements.fullscreen && 
+            SimpleTooltip(elements.fullscreen.element(), 'fullscreen', localization.fullscreen);
 
         // Filter out undefined elements
         const buttonLayout = [
@@ -251,7 +255,9 @@ export default class Controlbar {
 
         // Initial State
         elements.play.show();
-        elements.fullscreen.show();
+        if (elements.fullscreen) {
+            elements.fullscreen.show();
+        }
         if (elements.mute) {
             elements.mute.show();
         }
@@ -265,12 +271,14 @@ export default class Controlbar {
         _model.change('duration', this.onDuration, this);
         _model.change('position', this.onElapsed, this);
         _model.change('fullscreen', (model, val) => {
-            const fullscreenElement = this.elements.fullscreen.element();
-            toggleClass(fullscreenElement, 'jw-off', val);
+            if (this.elements.fullscreen) {
+                const fullscreenElement = this.elements.fullscreen.element();
+                toggleClass(fullscreenElement, 'jw-off', val);
 
-            const fullscreenText = model.get('fullscreen') ? localization.exitFullscreen : localization.fullscreen;
-            fullscreenTip.setText(fullscreenText);
-            setAttribute(fullscreenElement, 'aria-label', fullscreenText);
+                const fullscreenText = model.get('fullscreen') ? localization.exitFullscreen : localization.fullscreen;
+                fullscreenTip.setText(fullscreenText);
+                setAttribute(fullscreenElement, 'aria-label', fullscreenText);
+            }
         }, this);
         _model.change('streamType', this.onStreamTypeChange, this);
         _model.change('dvrLive', (model, dvrLive) => {
@@ -385,7 +393,9 @@ export default class Controlbar {
     }
 
     onCastActive(model, val) {
-        this.elements.fullscreen.toggle(!val);
+        if (this.elements.fullscreen) {
+            this.elements.fullscreen.toggle(!val);
+        }
         if (this.elements.cast.button) {
             toggleClass(this.elements.cast.button, 'jw-off', !val);
         }
