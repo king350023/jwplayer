@@ -187,6 +187,12 @@ class Model extends SimpleModel {
     // Mobile players always wait to become viewable.
     // Desktop players must have autostart set to viewable
     setAutoStart(autoStart) {
+        // Always autostart for tizen app
+        if (this.attributes.isTizenApp) {
+            this.set('autostart', true);
+            return;
+        }
+
         if (autoStart !== undefined) {
             this.set('autostart', autoStart);
         }
