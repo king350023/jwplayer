@@ -516,15 +516,8 @@ function VideoProvider(_playerId, _playerConfig, mediaElement) {
                     currentQuality = i;
                 }
                 if (label && levels[i].label === label) {
-                    currentQuality = i;
-                    break;
+                    return i;
                 }
-            }
-            if (!currentQuality) {
-                // Choose the highest quality
-                const sorted = levels.map((level, index) => Object.assign({ index, height: 0 }, level))
-                    .sort((a, b) => b.height - a.height);
-                currentQuality = sorted[0].index;
             }
         }
         visualQuality.reason = 'initial choice';
