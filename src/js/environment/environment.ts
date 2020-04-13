@@ -31,13 +31,15 @@ const noop: () => void = () => {
 function supportsPassive(): boolean {
     let passiveOptionRead = false;
 
-    try {
-        const opts: GenericObject = Object.defineProperty({}, 'passive', {
-            get: () => (passiveOptionRead = true)
-        });
-        window.addEventListener('testPassive', noop, opts);
-        window.removeEventListener('testPassive', noop, opts);
-    } catch (e) {/* noop */}
+    if (!__HEADLESS__) {
+        try {
+            const opts: GenericObject = Object.defineProperty({}, 'passive', {
+                get: () => (passiveOptionRead = true)
+            });
+            window.addEventListener('testPassive', noop, opts);
+            window.removeEventListener('testPassive', noop, opts);
+        } catch (e) {/* noop */}
+    }
 
     return passiveOptionRead;
 }

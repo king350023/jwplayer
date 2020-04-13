@@ -14,27 +14,29 @@ export default class AdProgramController extends ProgramController {
 
         adModel.mediaModel.attributes.mediaType = 'video';
 
-        // Ad plugins must use only one element, and must use the same element during playback of an item
-        // (i.e. prerolls, midrolls, and postrolls must use the same tag)
-        let mediaElement;
-        if (this.backgroundLoading) {
-            mediaElement = mediaPool.getAdElement();
-        } else {
-            // Take the tag that we're using to play the current item. The tag has been freed before reaching this point
-            mediaElement = model.get('mediaElement');
+        if (!__HEADLESS__) {
+            // Ad plugins must use only one element, and must use the same element during playback of an item
+            // (i.e. prerolls, midrolls, and postrolls must use the same tag)
+            let mediaElement;
+            if (this.backgroundLoading) {
+                mediaElement = mediaPool.getAdElement();
+            } else {
+                // Take the tag that we're using to play the current item. The tag has been freed before reaching this point
+                mediaElement = model.get('mediaElement');
 
-            adModel.attributes.mediaElement = mediaElement;
-            adModel.attributes.mediaSrc = mediaElement.src;
+                adModel.attributes.mediaElement = mediaElement;
+                adModel.attributes.mediaSrc = mediaElement.src;
 
-            // Listen to media element for events that indicate src was reset or load() was called
-            const srcResetListener = this.srcResetListener = () => {
-                this.srcReset();
-            };
-            mediaElement.addEventListener('emptied', srcResetListener);
-            mediaElement.playbackRate = mediaElement.defaultPlaybackRate = 1;
+                // Listen to media element for events that indicate src was reset or load() was called
+                const srcResetListener = this.srcResetListener = () => {
+                    this.srcReset();
+                };
+                mediaElement.addEventListener('emptied', srcResetListener);
+                mediaElement.playbackRate = mediaElement.defaultPlaybackRate = 1;
+            }
+
+            this.mediaPool = SharedMediaPool(mediaElement, mediaPool);
         }
-
-        this.mediaPool = SharedMediaPool(mediaElement, mediaPool);
     }
 
     setup() {
@@ -61,8 +63,10 @@ export default class AdProgramController extends ProgramController {
             this.trigger(ERROR, data);
         }, this);
 
-        if (!primedElement.paused) {
-            primedElement.pause();
+        if (!__HEADLESS__) {
+            if (!primedElement.paused) {
+                primedElement.pause();
+            }
         }
     }
 
@@ -139,26 +143,33 @@ export default class AdProgramController extends ProgramController {
     }
 
     destroy() {
-        const { model, mediaPool, playerModel } = this;
+        const { mediaController, model, mediaPool, playerModel } = this;
         model.off();
+
         // Do not destroy or remove provider event listeners since non-linear ads may continue to run after this point
         this.provider = null;
 
-        // We only use one media element from ads; getPrimedElement will return it
-        const mediaElement = mediaPool.getPrimedElement();
-        if (!this.backgroundLoading) {
-            if (mediaElement) {
-                mediaElement.removeEventListener('emptied', this.srcResetListener);
-                // Reset the player media model if the src was changed externally
-                if (mediaElement.src !== model.get('mediaSrc')) {
-                    this.srcReset();
-                }
+        if (__HEADLESS__) {
+            if (mediaController) {
+                mediaController.destroy();
             }
         } else {
-            mediaPool.clean();
-            const mediaContainer = playerModel.get('mediaContainer');
-            if (mediaElement.parentNode === mediaContainer) {
-                mediaContainer.removeChild(mediaElement);
+            // We only use one media element from ads; getPrimedElement will return it
+            const mediaElement = mediaPool.getPrimedElement();
+            if (!this.backgroundLoading) {
+                if (mediaElement) {
+                    mediaElement.removeEventListener('emptied', this.srcResetListener);
+                    // Reset the player media model if the src was changed externally
+                    if (mediaElement.src !== model.get('mediaSrc')) {
+                        this.srcReset();
+                    }
+                }
+            } else {
+                mediaPool.clean();
+                const mediaContainer = playerModel.get('mediaContainer');
+                if (mediaElement.parentNode === mediaContainer) {
+                    mediaContainer.removeChild(mediaElement);
+                }
             }
         }
     }

@@ -96,6 +96,9 @@ const Config = function(options, persisted) {
     config.mute = !!config.mute;
     config.language = language;
     config.intl = intl;
+    if (__HEADLESS__) {
+        config.controls = false;
+    }
 
     // If autoPause is configured with an empty block,
     // default autoPause.viewability to true.

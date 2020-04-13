@@ -29,7 +29,18 @@ const jwplayer = function(query) {
     } else if (typeof query === 'string') {
         player = playerById(query);
         if (!player) {
-            domElement = document.getElementById(query);
+            if (__HEADLESS__) {
+                domElement = {
+                    id: query,
+                    // Used by plugins
+                    querySelector(selector) {
+                        console.warn(`api.getContainer().querySelector("${selector}") not supported`);
+                        return null;
+                    }
+                };
+            } else {
+                domElement = document.getElementById(query);
+            }
         }
     } else if (typeof query === 'number') {
         player = instances[query];
