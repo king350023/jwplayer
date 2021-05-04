@@ -10,7 +10,7 @@
   "devDependencies": {
     "@babel/core": "7.13.15",
     "@babel/helper-module-imports": "7.0.0",
-    "@babel/preset-env": "7.3.1",
+    "@babel/preset-env": "7.14.1",
     "@babel/preset-typescript": "7.9.0",
     "@types/webpack-env": "^1.15.1",
     "@typescript-eslint/eslint-plugin": "2.11.0",
