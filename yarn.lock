@@ -5361,10 +5361,10 @@ markdown-table@^1.1.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/markdown-table/-/markdown-table-1.1.1.tgz#4b3dd3a133d1518b8ef0dbc709bf2a1b4824bc8c"
 
-marked@0.7.0:
-  version "0.7.0"
-  resolved "https://registry.yarnpkg.com/marked/-/marked-0.7.0.tgz#b64201f051d271b1edc10a04d1ae9b74bb8e5c0e"
-  integrity sha512-c+yYdCZJQrsRjTPhUx7VKkApw9bwDkNbHUKo1ovgcfDjb2kc8rLuRbIFyXL5WOEUwzSSKo3IXpph2K6DqB/KZg==
+marked@2.0.4:
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/marked/-/marked-2.0.4.tgz#71d54d41f27d91ac2ed308f73c301fe9f0657a94"
+  integrity sha512-MIL0xKRDQM3DE7dJr/wa6JV0EmK9yZ3cwuTc2bu66FNm/tmEMm9cJCgJZpt9R+K1T+pB2iBNV55wvnwSd345zg==
 
 marked@~0.3.6:
   version "0.3.19"
