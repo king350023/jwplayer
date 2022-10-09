@@ -28,7 +28,7 @@
     "eslint-plugin-no-unsanitized": "3.1.2",
     "esprima": "4.0.1",
     "fast-diff": "1.2.0",
-    "grunt": "^1.0.4",
+    "grunt": "^1.5.3",
     "grunt-cli": "1.2.0",
     "grunt-contrib-clean": "2.0.0",
     "grunt-contrib-connect": "1.0.2",
