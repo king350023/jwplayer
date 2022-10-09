@@ -12,7 +12,7 @@
     "@babel/helper-module-imports": "7.0.0",
     "@babel/preset-env": "7.19.3",
     "@babel/preset-typescript": "7.9.0",
-    "@types/webpack-env": "^1.15.1",
+    "@types/webpack-env": "^1.18.0",
     "@typescript-eslint/eslint-plugin": "2.11.0",
     "@typescript-eslint/eslint-plugin-tslint": "4.27.0",
     "@typescript-eslint/parser": "2.11.0",
