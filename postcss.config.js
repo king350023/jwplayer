@@ -1,6 +1,4 @@
-module.exports = {
-    plugins: [
-        require('postcss-easing-gradients'),
-        require('autoprefixer')
-    ]
-};
+export const plugins = [
+    require('postcss-easing-gradients'),
+    require('autoprefixer')
+];
