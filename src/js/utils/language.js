@@ -10,22 +10,190 @@ const translationPromises = {};
  * A map of 2-letter language codes (ISO 639-1) to language name in English
  */
 const codeToLang = {
-    zh: 'Chinese',
-    nl: 'Dutch',
-    en: 'English',
-    fr: 'French',
+    aa: 'Afar',
+    ab: 'Abkhazian',
+    ae: 'Avestan',
+    af: 'Afrikaans',
+    ak: 'Akan',
+    am: 'Amharic',
+    ar: 'Arabic',
+    an: 'Aragonese',
+    as: 'Assamese',
+    av: 'Avaric',
+    ay: 'Aymara',
+    az: 'Azerbaijani',
+    ba: 'Bashkir',
+    be: 'Belarusian',
+    bg: 'Bulgarian',
+    bh: 'Bihari languages',
+    bi: 'Bislama',
+    bm: 'Bambara',
+    bn: 'Bengali',
+    bo: 'Tibetan',
+    br: 'Breton',
+    bs: 'Bosnian',
+    ca: 'Catalan',
+    ce: 'Chechen',
+    ch: 'Chamorro',
+    co: 'Corsican',
+    cr: 'Cree',
+    cs: 'Czech',
+    cu: 'Church Slavic',
+    cv: 'Chuvash',
+    cy: 'Welsh',
+    da: 'Danish',
     de: 'German',
-    it: 'Italian',
-    ja: 'Japanese',
-    pt: 'Portuguese',
-    ru: 'Russian',
-    es: 'Spanish',
+    dv: 'Divehi',
+    dz: 'Dzongkha',
+    ee: 'Ewe',
     el: 'Greek',
+    en: 'English',
+    eo: 'Esperanto',
+    es: 'Spanish',
+    et: 'Estonian',
+    eu: 'Basque',
+    fa: 'Persian',
+    ff: 'Fulah',
     fi: 'Finnish',
+    fj: 'Fijian',
+    fo: 'Faroese',
+    fr: 'French',
+    fy: 'Western Frisian',
+    ga: 'Irish',
+    gd: 'Gaelic',
+    gl: 'Galician',
+    gn: 'Guarani',
+    gu: 'Gujarati',
+    gv: 'Manx',
+    ha: 'Hausa',
+    he: 'Hebrew',
+    hi: 'Hindi',
+    ho: 'Hiri Motu',
+    hr: 'Croatian',
+    ht: 'Haitian',
+    hu: 'Hungarian',
+    hy: 'Armenian',
+    hz: 'Herero',
+    ia: 'Interlingua',
     id: 'Indonesian',
+    ie: 'Interlingue',
+    ig: 'Igbo',
+    ii: 'Sichuan Yi',
+    ik: 'Inupiaq',
+    io: 'Ido',
+    is: 'Icelandic',
+    it: 'Italian',
+    iu: 'Inuktitut',
+    ja: 'Japanese',
+    jv: 'Javanese',
+    ka: 'Georgian',
+    kg: 'Kongo',
+    ki: 'Kikuyu',
+    kj: 'Kuanyama',
+    kk: 'Kazakh',
+    kl: 'Kalaallisut',
+    km: 'Central Khmer',
+    kn: 'Kannada',
     ko: 'Korean',
+    kr: 'Kanuri',
+    ks: 'Kashmiri',
+    ku: 'Kurdish',
+    kv: 'Komi',
+    kw: 'Cornish',
+    ky: 'Kirghiz',
+    la: 'Latin',
+    lb: 'Luxembourgish',
+    lg: 'Ganda',
+    li: 'Limburgan',
+    lo: 'Lao',
+    ln: 'Lingala',
+    lt: 'Lithuanian',
+    lu: 'Luba-Katanga',
+    lv: 'Latvian',
+    mg: 'Malagasy',
+    mh: 'Marshallese',
+    mi: 'Maori',
+    mk: 'Macedonian',
+    ml: 'Malayalam',
+    mn: 'Mongolian',
+    mr: 'Marathi',
+    ms: 'Malay',
+    mt: 'Maltese',
+    my: 'Burmese',
+    na: 'Nauru',
+    nb: 'Bokmål',
+    nd: 'Ndebele',
+    ne: 'Nepali',
+    ng: 'Ndonga',
+    nl: 'Dutch',
+    nn: 'Norwegian Nynorsk',
+    no: 'Norwegian',
+    nr: 'Ndebele',
+    nv: 'Navajo',
+    ny: 'Chichewa',
+    oc: 'Occitan',
+    oj: 'Ojibwa',
+    om: 'Oromo',
+    or: 'Oriya',
+    os: 'Ossetian',
+    pa: 'Panjabi',
+    pi: 'Pali',
+    pl: 'Polish',
+    pt: 'Portuguese',
+    ps: 'Pushto',
+    qu: 'Quechua',
+    rm: 'Romansh',
+    rn: 'Rundi',
+    ro: 'Romanian',
+    ru: 'Russian',
+    rw: 'Kinyarwanda',
+    sa: 'Sanskrit',
+    sc: 'Sardinian',
+    sd: 'Sindhi',
+    se: 'Northern Sami',
+    sg: 'Sango',
+    si: 'Sinhala',
+    sk: 'Slovak',
+    sl: 'Slovenian',
+    sm: 'Samoan',
+    sn: 'Shona',
+    so: 'Somali',
+    sq: 'Albanian',
+    sr: 'Serbian',
+    ss: 'Swati',
+    st: 'Sotho',
+    su: 'Sundanese',
+    sw: 'Swahili',
+    sv: 'Swedish',
+    ta: 'Tamil',
+    te: 'Telugu',
+    tg: 'Tajik',
     th: 'Thai',
-    vi: 'Vietnamese'
+    ti: 'Tigrinya',
+    tk: 'Turkmen',
+    tl: 'Tagalog',
+    tn: 'Tswana',
+    to: 'Tonga',
+    tr: 'Turkish',
+    ts: 'Tsonga',
+    tt: 'Tatar',
+    tw: 'Twi',
+    ty: 'Tahitian',
+    ug: 'Uighur',
+    uk: 'Ukrainian',
+    ur: 'Urdu',
+    uz: 'Uzbek',
+    ve: 'Venda',
+    vi: 'Vietnamese',
+    vo: 'Volapük',
+    wa: 'Walloon',
+    wo: 'Wolof',
+    xh: 'Xhosa',
+    yi: 'Yiddish',
+    yo: 'Yoruba',
+    za: 'Zhuang',
+    zh: 'Chinese',
+    zu: 'Zulu'
 };
 
 const langToCode = invert(codeToLang);
@@ -73,7 +241,11 @@ function extractLanguage(doc) {
     return htmlTag ? htmlTag.getAttribute('lang') : null;
 }
 
-export function getLanguage() {
+export const getLanguage = function() {
+    // Used in tests to override the value we return;
+    if (typeof getLanguage.mock_ === 'string') {
+        return getLanguage.mock_;
+    }
     if (__HEADLESS__) {
         return navigator.language || 'en';
     }
@@ -85,7 +257,9 @@ export function getLanguage() {
         } catch (e) {/* ignore */}
     }
     return language || navigator.language || 'en';
-}
+};
+
+getLanguage.mock_ = null;
 
 // TODO: Deprecate "no", keep "nn" and "nb"
 export const translatedLanguageCodes = ['ar', 'da', 'de', 'el', 'es', 'fi', 'fr', 'he', 'id', 'it', 'ja', 'ko', 'nb', 'nl', 'nn', 'no', 'oc', 'pt', 'ro', 'ru', 'sl', 'sv', 'th', 'tr', 'vi', 'zh'];
@@ -101,9 +275,14 @@ export function isRtl(message) {
     return message.charCodeAt(0) === 8207 || rtlRegex.test(message);
 }
 
-export function isTranslationAvailable(language) {
+export const isTranslationAvailable = function(language) {
+    if (typeof isTranslationAvailable.mock_ === 'boolean') {
+        return isTranslationAvailable.mock_;
+    }
     return translatedLanguageCodes.indexOf(normalizeLanguageCode(language)) >= 0;
-}
+};
+
+isTranslationAvailable.mock_ = null;
 
 export function getCustomLocalization(config, intl, languageAndCountryCode) {
     return Object.assign({}, getCustom(config), intl[normalizeLanguageCode(languageAndCountryCode)], intl[normalizeLanguageAndCountryCode(languageAndCountryCode)]);
@@ -162,20 +341,28 @@ function mergeProperty(localizationObj, allOptionsObj, prop) {
     }
 }
 
-export function isLocalizationComplete(customLocalization) {
+export const isLocalizationComplete = function(customLocalization) {
+    if (typeof isLocalizationComplete.mock_ === 'boolean') {
+        return isLocalizationComplete.mock_;
+    }
     return isDeepKeyCompliant(en, customLocalization, (key, obj) => {
         const value = obj[key];
         return typeof value === 'string';
     });
-}
+};
 
-// Used to ensure nb/nn language codes both return 'no'. 
+isLocalizationComplete.mock_ = null;
+
+// Used to ensure nb/nn language codes both return 'no'.
 // TODO: Deprecate and replace with nn and nb
 function normalizeNorwegian(language) {
     return /^n[bn]$/.test(language) ? 'no' : language;
 }
 
-export function loadJsonTranslation(base, languageCode) {
+export const loadJsonTranslation = function(base, languageCode) {
+    if (typeof loadJsonTranslation.mock_ === 'function') {
+        return loadJsonTranslation.mock_;
+    }
     let translationLoad = translationPromises[languageCode];
     if (!translationLoad) {
         const url = `${base}translations/${normalizeNorwegian(normalizeLanguageCode(languageCode))}.json`;
@@ -188,7 +375,9 @@ export function loadJsonTranslation(base, languageCode) {
         });
     }
     return translationLoad;
-}
+};
+
+loadJsonTranslation.mock_ = null;
 
 export function applyTranslation(baseLocalization, customization) {
     const localization = Object.assign({}, baseLocalization, customization);

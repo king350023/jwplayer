@@ -59,7 +59,6 @@ export type TextTrackLike = TextTrack & {
     embedded?: boolean;
     sideloaded?: boolean;
     groupid?: string; // Shaka-player 'subs' tracks
-    source?: 'mpegts'; // Legacy Flash provider attribute
     file?: string;
 };
 
@@ -72,3 +71,5 @@ export type BoundingRect = {
     top: number;
     bottom: number;
 };
+
+export type GenericUIEvent = MouseEvent & { sourceEvent: Event };

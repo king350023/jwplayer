@@ -114,8 +114,11 @@ function xhrSuccess(
 }
 
 function loadVttParser(): Promise<typeof VTTParser> {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     return require.ensure(['parsers/captions/vttparser'], 
-        function (require: NodeRequire): typeof VTTParser {
+        function (require: any): typeof VTTParser {
+	    // eslint-disable-next-line @typescript-eslint/no-var-requires
             return require('parsers/captions/vttparser').default;
         }, 
         chunkLoadWarningHandler(301131), 'vttparser'

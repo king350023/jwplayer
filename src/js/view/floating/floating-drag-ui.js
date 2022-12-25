@@ -1,5 +1,6 @@
 import UI from 'utils/ui';
-import { style } from 'utils/css';
+import { transform, style } from 'utils/css';
+import { addClass, removeClass } from 'utils/dom';
 
 export default class FloatingDragUI {
     constructor(element) {
@@ -8,6 +9,13 @@ export default class FloatingDragUI {
     }
 
     disable() {
+        const container = this.container;
+        if (container) {
+            // 'Dragged' state is reset so the transition animation can fire again if the player re-floats.
+            removeClass(container, 'jw-floating-dragged');
+            removeClass(container, 'jw-floating-dragging');
+            setWillChange(container, 'auto');
+        }
         if (this.ui) {
             this.ui.destroy();
             this.ui = null;
@@ -15,46 +23,49 @@ export default class FloatingDragUI {
     }
 
     enable() {
-        let playerLeft;
-        let playerTop;
-        let innerHeight;
-        let innerWidth;
-        const auto = 'auto';
         const { container, input } = this;
-        const ui = this.ui = new UI(input, { preventScrolling: true })
-            .on('dragStart', () => {
-                playerLeft = container.offsetLeft;
-                playerTop = container.offsetTop;
-                innerHeight = window.innerHeight;
-                innerWidth = window.innerWidth;
+        let startX;
+        let startY;
+        let deltaX;
+        let deltaY;
+        let x = 0;
+        let y = 0;
+        // A min/max delta is assigned to prevent the player from being dragged off screen.
+        let minDeltaX;
+        let minDeltaY;
+        let maxDeltaX;
+        let maxDeltaY;
+        this.ui = new UI(input, { preventScrolling: true })
+            .on('dragStart', (e) => {
+                const { pageX, pageY } = e;
+                const { innerWidth, innerHeight } = window;
+                const { offsetLeft, offsetTop, offsetWidth, offsetHeight } = container;
+                startX = pageX;
+                startY = pageY;
+                minDeltaX = -offsetLeft;
+                minDeltaY = -offsetTop;
+                maxDeltaX = calculateMax(innerWidth, offsetLeft, offsetWidth);
+                maxDeltaY = calculateMax(innerHeight, offsetTop, offsetHeight);
+                // Class prevents initial animation styles from overriding translate styling.
+                addClass(container, 'jw-floating-dragged');
+                addClass(container, 'jw-floating-dragging');
+                setWillChange(container, 'transform');
             })
             .on('drag', (e) => {
-                let left = Math.max(playerLeft + e.pageX - ui.startX, 0);
-                let top = Math.max(playerTop + e.pageY - ui.startY, 0);
-                let right = Math.max(innerWidth - (left + container.clientWidth), 0);
-                let bottom = Math.max(innerHeight - (top + container.clientHeight), 0);
-
-                if (right === 0) {
-                    left = auto;
-                } else {
-                    right = auto;
-                }
-                if (top === 0) {
-                    bottom = auto;
-                } else {
-                    top = auto;
-                }
-
-                style(container, {
-                    left,
-                    right,
-                    top,
-                    bottom,
-                    margin: 0
-                });
+                const { pageX, pageY } = e;
+                deltaX = calculateDelta(x, pageX, startX, maxDeltaX, minDeltaX);
+                deltaY = calculateDelta(y, pageY, startY, maxDeltaY, minDeltaY);
+                transform(container, `translate(${deltaX}px, ${deltaY}px)`);
             })
             .on('dragEnd', () => {
-                playerLeft = playerTop = innerWidth = innerHeight = null;
+                removeClass(container, 'jw-floating-dragging');
+                setWillChange(container, 'auto');
+                x = deltaX;
+                y = deltaY;
             });
     }
 }
+
+const calculateMax = (windowLength, offset, length) => windowLength - offset - length;
+const calculateDelta = (last, current, first, max, min) => Math.max(Math.min(last + current - first, max), min);
+const setWillChange = (element, willChange) => style(element, { willChange });

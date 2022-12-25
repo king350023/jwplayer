@@ -3,7 +3,7 @@
 .jw-flag-audio-player {
     background-color: @black;
 
-    &:not(.jw-flag-flash-blocked) .jw-media {
+    .jw-media {
         visibility: hidden;
     }
 
@@ -11,18 +11,16 @@
         background: none;
     }
 
-    // min 44px object tag prevents IE11 CORS Flash Blocking
-    object {
-        min-height: @mobile-touch-target;
-    }
-
     &:not(.jw-flag-live) .jw-spacer {
         display: none;
     }
 
-    .jw-preview, // overrides 'block' from .jw-state-idle
-    .jw-display, // overrides 'block' from .jw-flag-touch.jw-state-paused
-    .jw-title, // overrides 'block' from .jw-state-idle
+    // .jw-preview overrides 'block' from .jw-state-idle
+    // .jw-display overrides 'block' from .jw-flag-touch.jw-state-paused
+    // .jw-title overrides 'block' from .jw-state-idle
+    .jw-preview,
+    .jw-display,
+    .jw-title,
     .jw-nextup-container {
         display: none;
     }

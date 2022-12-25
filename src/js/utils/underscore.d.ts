@@ -12,6 +12,9 @@
 
 /* eslint spaced-comment: 0 */
 /* eslint @typescript-eslint/no-empty-interface: 0 */
+/* eslint @typescript-eslint/no-shadow: 0 */
+/* eslint @typescript-eslint/no-unused-vars: 0 */
+/* eslint @typescript-eslint/no-redeclare: 0 */
 
 declare let _: _.UnderscoreStatic;
 export = _;
@@ -3653,13 +3656,6 @@ declare namespace _ {
         mapObject(object: any, iteratee: string, context?: any): _.Dictionary<any>;
 
         /**
-        * Convert an object into a list of [key, value] pairs.
-        * @param object Convert this object to a list of [key, value] pairs.
-        * @return List of [key, value] pairs on `object`.
-        **/
-        pairs(object: any): [string, any][];
-
-        /**
         * Returns a copy of the object where the keys have become the values and the values the keys.
         * For this to work, all of your object's values should be unique and string serializable.
         * @param object Object to invert key/value pairs.
@@ -4761,12 +4757,6 @@ declare namespace _ {
 
         /**
         * Wrapped type `object`.
-        * @see _.pairs
-        **/
-        pairs(): [string, any][];
-
-        /**
-        * Wrapped type `object`.
         * @see _.invert
         **/
         invert(): any;
@@ -5083,7 +5073,7 @@ declare namespace _ {
         value<TResult>(): TResult;
     }
 
-    /* eslint-disable-next-line @typescript-eslint/class-name-casing */
+    /* eslint-disable-next-line @typescript-eslint/naming-convention */
     interface _Chain<T, V = T> {
 
         /* *************
@@ -5734,12 +5724,6 @@ declare namespace _ {
 
         /**
         * Wrapped type `object`.
-        * @see _.pairs
-        **/
-        pairs(): _Chain<[string, any]>;
-
-        /**
-        * Wrapped type `object`.
         * @see _.invert
         **/
         invert(): _Chain<T>;
@@ -6136,12 +6120,12 @@ declare namespace _ {
         value(): V;
     }
 
-    /* eslint-disable-next-line @typescript-eslint/class-name-casing */
+    /* eslint-disable-next-line @typescript-eslint/naming-convention */
     interface _ChainSingle<T> {
         value(): T;
     }
 
-    /* eslint-disable-next-line @typescript-eslint/class-name-casing */
+    /* eslint-disable-next-line @typescript-eslint/naming-convention */
     interface _ChainOfArrays<T> extends _Chain<T[]> {
         flatten(shallow?: boolean): _Chain<T>;
     }

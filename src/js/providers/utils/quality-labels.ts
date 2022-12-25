@@ -1,7 +1,7 @@
 import type { ProviderLevel } from 'providers/data-normalizer';
 import type { GenericObject } from 'types/generic.type';
 
-type QualityLabels = {
+export type QualityLabels = {
     [key: number]: string;
 };
 
@@ -10,9 +10,7 @@ export function generateLabel(level?: ProviderLevel, qualityLabels?: QualityLabe
     if (!level) {
         return '';
     }
-    // flash provider uses bitrate instead of bandwidth
     const bandwidth = level.bitrate || level.bandwidth;
-    // flash provider, in some cases, will create its own label. Prefer it over creating a new label
     return getCustomLabel(qualityLabels, bandwidth) ||
         level.label ||
         createLabel(level.height, bandwidth, redundant);

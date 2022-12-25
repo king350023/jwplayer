@@ -26,6 +26,7 @@ export type PlayerModelAttributes = {
     __ab_truncated?: boolean;
     _destroyed: boolean;
     advertising: GenericObject;
+    allowFullscreen: boolean;
     aspectratio: string | null;
     audioMode: boolean;
     autostart: AutoStart;
@@ -45,8 +46,6 @@ export type PlayerModelAttributes = {
     dvrSeekLimit: number;
     displayPlaybackLabel: boolean;
     enableShortcuts: boolean;
-    flashBlocked: boolean;
-    flashThrottle?: boolean;
     floating?: FloatConfig;
     fullscreen: boolean;
     height: number | string;
@@ -73,6 +72,7 @@ export type PlayerModelAttributes = {
     nextUp: PlaylistItem;
     nextUpDisplay: boolean;
     pauseReason: PauseReason;
+    pip: boolean;
     playbackRate: number;
     playlist: PlaylistItem[];
     playlistItem: PlaylistItem | null;
@@ -177,7 +177,12 @@ class Model extends SimpleModel {
         if (this._provider) {
             this._provider.off(null, null, this);
             this._provider.destroy();
+            this._provider = null;
         }
+        if (this.mediaModel) {
+            this.mediaModel.off();
+        }
+        this.providerController = null;
     }
 
     getVideo(): ImplementedProvider | null {
@@ -329,11 +334,6 @@ const syncProviderProperties = (model: Model, provider: ImplementedProvider) => 
     model.set('provider', provider.getName());
     if (model.get('instreamMode') === true) {
         provider.instreamMode = true;
-    }
-
-    if (provider.getName().name.indexOf('flash') === -1) {
-        model.set('flashThrottle', undefined);
-        model.set('flashBlocked', false);
     }
 
     // Attempt setting the playback rate to be the user selected value

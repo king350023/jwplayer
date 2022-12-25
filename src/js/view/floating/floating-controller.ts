@@ -71,6 +71,7 @@ export default class FloatingController {
     _boundThrottledMobileFloatScrollHandler: Function;
     _playerBounds: BoundingRect;
     _boundInitFloatingBehavior: () => void;
+    _inTransition: boolean;
 
     constructor(
         model: Model,
@@ -92,6 +93,7 @@ export default class FloatingController {
         this._playerBounds = playerBounds;
         this._isMobile = isMobile;
         this._mobileCheckCanFire = true;
+        this._inTransition = false;
 
         this._boundThrottledMobileFloatScrollHandler = this.throttledMobileFloatScrollHandler.bind(this);
 
@@ -151,8 +153,8 @@ export default class FloatingController {
         if (this.getFloatingPlayer() === null) {
             this.setFloatingPlayer(this._playerEl);
 
+            this.transitionFloating(true);
             this._model.set('isFloating', true);
-
             addClass(this._playerEl, 'jw-flag-floating');
 
             if (mobileFloatIntoPlace) {
@@ -163,13 +165,16 @@ export default class FloatingController {
                     transform: `translateY(-${FLOATING_TOP_OFFSET - playerBounds.top}px)`
                 });
 
-                setTimeout(() => {
+                window.setTimeout(() => {
                     style(this._wrapperEl, {
                         transform: 'translateY(0)',
                         transition: 'transform 150ms cubic-bezier(0, 0.25, 0.25, 1)'
                     });
                 });
             }
+            window.setTimeout(() => {
+                this.transitionFloating(false);
+            }, 50);
 
             // Copy background from preview element
             const previewEl = this._preview.el as HTMLElement;
@@ -182,9 +187,6 @@ export default class FloatingController {
             if (!this._model.get('instreamMode')) {
                 this._floatingUI.enable();
             }
-
-            // Perform resize and trigger "float" event responsively to prevent layout thrashing
-            this._model.trigger('forceResponsiveListener', {});
         } else if (this.getFloatingPlayer() !== this._playerEl && this.getFloatMode() === 'always') {
             addFPWatcher(this);
         }
@@ -200,6 +202,7 @@ export default class FloatingController {
             return;
         }
 
+        this.transitionFloating(true);
         this.setFloatingPlayer(null);
         this._model.set('isFloating', false);
         const playerBounds = this._playerBounds;
@@ -214,15 +217,13 @@ export default class FloatingController {
                 maxWidth: null,
                 width: null,
                 height: null,
-                left: null,
-                right: null,
-                top: null,
-                bottom: null,
-                margin: null,
                 transform: null,
                 transition: null,
                 'transition-timing-function': null
             });
+            window.setTimeout(() => {
+                this.transitionFloating(false);
+            }, 50);
         };
 
         if (mobileFloatIntoPlace) {
@@ -234,15 +235,30 @@ export default class FloatingController {
                 'transition-timing-function': 'ease-out'
             });
 
-            setTimeout(resetFloatingStyles, 150);
+            window.setTimeout(resetFloatingStyles, 150);
         } else {
             resetFloatingStyles();
         }
 
         this.disableFloatingUI();
+    }
+    
+    transitionFloating(isTransitionIn: boolean): void {
+        this._inTransition = isTransitionIn;
+        // Hiding the wrapper will impact player viewability momentarily, but reduce CLS
+        // We could hide the wrappers contents (controls, overlays) and reduce some CLS, but not as much
+        const wrapper = this._wrapperEl;
+        style(wrapper, {
+            display: isTransitionIn ? 'none' : null
+        });
+        if (!isTransitionIn) {
+            // Perform resize and trigger "float" event responsively to prevent layout thrashing
+            this._model.trigger('forceResponsiveListener', {});
+        }
+    }
 
-        // Perform resize and trigger "float" event responsively to prevent layout thrashing
-        this._model.trigger('forceResponsiveListener', {});
+    isInTransition(): boolean {
+        return this._inTransition;
     }
 
     updateFloatingSize(): void {
@@ -326,7 +342,7 @@ export default class FloatingController {
             return;
         }
         clearTimeout(this._mobileDebounceTimeout);
-        this._mobileDebounceTimeout = setTimeout(this.checkFloatOnScroll.bind(this), 150);
+        this._mobileDebounceTimeout = window.setTimeout(this.checkFloatOnScroll.bind(this), 150);
 
         if (!this._mobileCheckCanFire) {
             return;
@@ -335,7 +351,7 @@ export default class FloatingController {
         this._mobileCheckCanFire = false;
         this.checkFloatOnScroll();
 
-        setTimeout(() => {
+        window.setTimeout(() => {
             this._mobileCheckCanFire = true;
         }, 50);
     }

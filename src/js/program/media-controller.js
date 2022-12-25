@@ -2,7 +2,7 @@ import cancelable from 'utils/cancelable';
 import Events from 'utils/backbone.events';
 import ApiQueueDecorator from 'api/api-queue';
 import { PlayerError, getPlayAttemptFailedErrorCode } from 'api/errors';
-import { ProviderListener } from 'program/program-listeners';
+import { providerListener } from 'program/program-listeners';
 import { MediaModel } from 'controller/model';
 import { seconds } from 'utils/strings';
 import {
@@ -19,7 +19,7 @@ export default class MediaController extends Events {
         this.mediaModel = new MediaModel();
         this.model = model;
         this.provider = provider;
-        this.providerListener = new ProviderListener(this);
+        this.providerListener = providerListener;
         this.thenPlayPromise = cancelable(() => {});
         provider.off();
         provider.on('all', this.providerListener, this);
@@ -85,9 +85,20 @@ export default class MediaController extends Events {
         if (provider.getContainer()) {
             provider.remove();
         }
+        if (this.eventQueue) {
+            this.eventQueue.destroy();
+        }
         delete provider.instreamMode;
-        this.provider = null;
-        this.item = null;
+        if (this.thenPlayPromise) {
+            this.thenPlayPromise.cancel();
+        }
+        this.provider =
+            this.mediaModel =
+            this.model =
+            this.eventQueue =
+            this.item =
+            this.providerListener =
+            this.thenPlayPromise = null;
     }
 
     attach() {
@@ -177,10 +188,10 @@ export default class MediaController extends Events {
         const providerSetupPromise = provider.load(item);
         if (providerSetupPromise) {
             const thenPlayPromise = cancelable(() => {
-                return provider.play() || Promise.resolve();
+                return this.provider.play() || Promise.resolve();
             });
             this.thenPlayPromise = thenPlayPromise;
-            return providerSetupPromise.then(thenPlayPromise.async);
+            return providerSetupPromise.then(() => thenPlayPromise.async());
         }
         return provider.play() || Promise.resolve();
     }

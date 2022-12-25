@@ -6,7 +6,6 @@ import { Features } from 'environment/environment';
 import en from 'assets/translations/en.js';
 import { getLanguage, getCustomLocalization, applyTranslation, normalizeIntl } from 'utils/language';
 
-/* global __webpack_public_path__:true */
 /* eslint camelcase: 0 */
 // Defaults
 // Alphabetical order
@@ -16,6 +15,7 @@ export const Defaults = {
         pauseAds: false
     },
     autostart: false,
+    allowFullscreen: true,
     bandwidthEstimate: null,
     bitrateSelection: null,
     castAvailable: false,
@@ -49,7 +49,7 @@ export function getLiveSyncDuration(liveSyncDuration) {
     }
     if (liveSyncDuration > 30) {
         return 30;
-    } 
+    }
     return liveSyncDuration;
 }
 
@@ -86,6 +86,7 @@ const Config = function(options, persisted) {
         config.base = getScriptPath('jwplayer.js');
     }
     config.base = (config.base || loadFrom()).replace(/\/?$/, '/');
+    // eslint-disable-next-line
     __webpack_public_path__ = config.base;
     config.width = normalizeSize(config.width);
     config.height = normalizeSize(config.height);

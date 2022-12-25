@@ -8,7 +8,7 @@ import {
 } from 'utils/dom';
 import button from 'view/controls/components/button';
 import { cloneIcon } from 'view/controls/icons';
-import { RadioMenuItem } from 'view/controls/components/menu/menu-item';
+import { ButtonMenuItem } from 'view/controls/components/menu/menu-item';
 import { MenuTemplate } from 'view/controls/templates/menu/menu';
 import { normalizeKey } from './utils';
 import menuCategoryButton from 'view/controls/components/menu/category-button';
@@ -182,7 +182,7 @@ export default class Menu extends Events {
         prependChild(this.el, topbar);
         return topbar;
     }
-    createItems(genericItems, action, options = {}, Item = RadioMenuItem) {
+    createItems(genericItems, action, options = {}, Item = ButtonMenuItem) {
         const itemType = this.name;
         const menuItems = genericItems.map((item, index) => {
             let content;
@@ -343,11 +343,17 @@ export default class Menu extends Events {
             this.setBackButtonAriaLabel(parentMenuTitle);
             mainMenu.backButton.show();
             this.mainMenu.backButtonTarget = this.parentMenu;
+            if (this.buttonContainer) {
+                this.buttonContainer.el.setAttribute('aria-expanded', true);
+            }
             focusEl = menuTitleElement;
         } else {
             mainMenu.topbar.el.classList.remove('jw-nested-menu-open');
             if (mainMenu.backButton) {
                 mainMenu.backButton.hide();
+            }
+            if (this.mainMenu.backButtonTarget) {
+                this.mainMenu.backButtonTarget = null;
             }
         }
         this.el.classList.add('jw-settings-submenu-active');
@@ -368,7 +374,9 @@ export default class Menu extends Events {
         this.visible = true;
         this.el.setAttribute('aria-expanded', 'true');
         if (focusEl) {
-            focusEl.focus();
+            setTimeout(() => {
+                focusEl.focus();
+            });
         }
     }
     close(evt) {
@@ -379,6 +387,9 @@ export default class Menu extends Events {
         this.visible = false;
         this.el.setAttribute('aria-expanded', 'false'); 
         this.el.classList.remove('jw-settings-submenu-active');
+        if (this.buttonContainer) {
+            this.buttonContainer.el.setAttribute('aria-expanded', false);
+        }
         if (this.categoryButton) {
             this.categoryButton.element().setAttribute('aria-expanded', 'false');
         }

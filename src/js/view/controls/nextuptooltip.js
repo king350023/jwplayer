@@ -7,6 +7,7 @@ import { cloneIcon } from 'view/controls/icons';
 import { offsetToSeconds, isPercentage } from 'utils/strings';
 import { genId, FEED_SHOWN_ID_LENGTH } from 'utils/random-id-generator';
 import { timeFormat } from 'utils/parser';
+import { addClickAction } from 'view/utils/add-click-action';
 
 export default class NextUpTooltip {
     constructor(_model, _api, playerElement) {
@@ -57,12 +58,12 @@ export default class NextUpTooltip {
         }, this);
 
         // Close button
-        this.closeUi = new UI(this.closeButton, { directSelect: true }).on('click tap enter', function() {
+        this.closeUi = addClickAction(this.closeButton, function() {
             this.nextUpSticky = false;
             this.toggle(false);
         }, this);
         // Tooltip
-        this.tooltipUi = new UI(this.tooltip).on('click tap', this.click, this);
+        this.tooltipUi = new UI(this.tooltip).on('click', this.click, this);
     }
 
     loadThumbnail(url) {
@@ -112,11 +113,18 @@ export default class NextUpTooltip {
     setNextUpItem(nextUpItem) {
         // Give the previous item time to complete its animation
         setTimeout(() => {
+            const { mediaid, image, title, duration } = nextUpItem;
             // Set thumbnail
             this.thumbnail = this.content.querySelector('.jw-nextup-thumbnail');
-            toggleClass(this.content, 'jw-nextup-thumbnail-visible', !!nextUpItem.image);
-            if (nextUpItem.image) {
-                const thumbnailStyle = this.loadThumbnail(nextUpItem.image);
+            toggleClass(this.content, 'jw-nextup-thumbnail-visible', !!image);
+            if (image || mediaid) {
+                let thumbnailSrc;
+                if (mediaid) {
+                    thumbnailSrc = `https://cdn.jwplayer.com/v2/media/${mediaid}/poster.jpg?width=120`;
+                } else {
+                    thumbnailSrc = image;
+                }
+                const thumbnailStyle = this.loadThumbnail(thumbnailSrc);
                 style(this.thumbnail, thumbnailStyle);
             }
 
@@ -126,12 +134,10 @@ export default class NextUpTooltip {
 
             // Set title
             this.title = this.content.querySelector('.jw-nextup-title');
-            const title = nextUpItem.title;
             // createElement is used to leverage 'textContent', to protect against developers passing a title with html styling.
             this.title.textContent = title ? createElement(title).textContent : '';
 
             // Set duration
-            const duration = nextUpItem.duration;
             if (duration) {
                 this.duration = this.content.querySelector('.jw-nextup-duration');
                 this.duration.textContent = typeof duration === 'number' ? timeFormat(duration) : duration;

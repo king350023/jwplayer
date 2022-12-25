@@ -1,10 +1,10 @@
 import rightclickTemplate from 'view/controls/templates/rightclick';
 import { cloneIcon } from 'view/controls/icons';
 import { version } from 'version';
-import { flashVersion } from 'utils/browser';
 import { createElement, emptyElement, addClass, removeClass, bounds } from 'utils/dom';
-import { OS } from 'environment/environment';
-import UI from 'utils/ui';
+import { Browser, OS } from 'environment/environment';
+import { isTizen } from 'utils/browser';
+import UI, { isRightClick } from 'utils/ui';
 import { isRtl } from 'utils/language';
 
 const EDITION_MAP = {
@@ -31,8 +31,7 @@ function createDomElement(html) {
 }
 
 export default class RightClick {
-    constructor(infoOverlay, shortcutsTooltip) {
-        this.infoOverlay = infoOverlay;
+    constructor(shortcutsTooltip) {
         this.shortcutsTooltip = shortcutsTooltip;
     }
 
@@ -46,9 +45,6 @@ export default class RightClick {
 
         const menu = {
             items: [{
-                type: 'info'
-            },
-            {
                 title: isRtl(poweredBy) ? `${versionSpan} ${poweredBy}` : `${poweredBy} ${versionSpan}`,
                 type: 'link',
                 featured: true,
@@ -57,19 +53,17 @@ export default class RightClick {
             }]
         };
 
-        const provider = model.get('provider');
         const menuItems = menu.items;
-        if (provider && provider.name.indexOf('flash') >= 0) {
-            const text = 'Flash Version ' + flashVersion();
-            menuItems.push({
-                title: text,
-                type: 'link',
-                link: 'http://www.adobe.com/software/flash/about/'
-            });
-        }
         if (this.shortcutsTooltip) {
             menuItems.splice(menuItems.length - 1, 0, {
                 type: 'keyboardShortcuts'
+            });
+        }
+        this.pipMenu = !OS.mobile && model.get('pipIcon') !== 'disabled'
+            && ((Browser.chrome &&!isTizen()) || Browser.edge || Browser.safari);
+        if (this.pipMenu) {
+            menuItems.splice(menuItems.length - 1, 0, {
+                type: 'pip'
             });
         }
 
@@ -146,7 +140,12 @@ export default class RightClick {
         this.el = createDomElement(this.html);
         this.wrapperElement.appendChild(this.el);
 
-        this.hideMenuHandler = e => this.hideMenu(e);
+        this.hideMenuHandler = e => {
+            if (isRightClick(e)) {
+                return;
+            }
+            this.hideMenu(e);
+        };
         this.overHandler = () => {
             this.mouseOverContext = true;
         };
@@ -156,14 +155,11 @@ export default class RightClick {
                 this.hideMenu();
             }
         };
-        this.infoOverlayHandler = () => {
-            // Open the info overlay if clicked, and hide the rightclick menu
-            this.mouseOverContext = false;
-            this.hideMenu();
-            this.infoOverlay.open();
+        this.pipHandler = () => {
+            this.model.set('pip', !this.model.get('pip'));
         };
         this.shortcutsTooltipHandler = () => {
-            // Open the info overlay if clicked, and hide the rightclick menu
+            // Open the shortcuts tooltip if clicked, and hide the rightclick menu
             this.mouseOverContext = false;
             this.hideMenu();
             this.shortcutsTooltip.open();
@@ -191,7 +187,10 @@ export default class RightClick {
             this.el.addEventListener('mouseover', this.overHandler);
             this.el.addEventListener('mouseout', this.outHandler);
         }
-        this.el.querySelector('.jw-info-overlay-item').addEventListener('click', this.infoOverlayHandler);
+
+        if (this.pipMenu) {
+            this.el.querySelector('.jw-pip-item').addEventListener('click', this.pipHandler);
+        }
 
         if (this.shortcutsTooltip) {
             this.el.querySelector('.jw-shortcuts-item').addEventListener('click', this.shortcutsTooltipHandler);
@@ -204,9 +203,11 @@ export default class RightClick {
             this.wrapperElement.removeEventListener('touchstart', this.hideMenuHandler);
         }
         if (this.el) {
-            this.el.querySelector('.jw-info-overlay-item').removeEventListener('click', this.infoOverlayHandler);
             this.el.removeEventListener('mouseover', this.overHandler);
             this.el.removeEventListener('mouseout', this.outHandler);
+            if (this.pipMenu) {
+                this.el.querySelector('.jw-pip-item').removeEventListener('click', this.pipHandler);
+            }
             if (this.shortcutsTooltip) {
                 this.el.querySelector('.jw-shortcuts-item').removeEventListener('click', this.shortcutsTooltipHandler);
             }

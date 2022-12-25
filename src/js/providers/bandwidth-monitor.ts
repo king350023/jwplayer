@@ -1,6 +1,6 @@
 import { BANDWIDTH_ESTIMATE } from 'events/events';
 import { isValidNumber } from 'utils/underscore';
-import type { ImplementedProvider } from './default';
+import type { ProviderWithMixins } from 'providers/default';
 
 export type BandwidthMonitor = {
     start: () => void;
@@ -8,7 +8,8 @@ export type BandwidthMonitor = {
     getEstimate: () => number;
 }
 
-export default function BandwidthMonitor(provider: ImplementedProvider, initialEstimate: number): BandwidthMonitor {
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export default function BandwidthMonitor(provider: ProviderWithMixins, initialEstimate: number): BandwidthMonitor {
     let bandwidthMonitorInterval: number | undefined;
     let bandwidthEstimate = initialEstimate;
     return {

@@ -17,8 +17,8 @@ export default class ClickHandler extends Events {
         this.domElement = element;
         this.model = model;
 
-        this.ui = new UI(element).on('click tap', this.clickHandler, this)
-            .on('doubleClick doubleTap', function(this: ClickHandler): void {
+        this.ui = new UI(element).on('click', this.clickHandler, this)
+            .on('doubleClick', function(this: ClickHandler): void {
                 if (this.alternateDoubleClickHandler) {
                     this.alternateDoubleClickHandler();
                     return;
@@ -42,14 +42,11 @@ export default class ClickHandler extends Events {
             return;
         }
 
-        if (this.model.get('flashBlocked')) {
-            return;
-        }
         if (this.alternateClickHandler) {
             this.alternateClickHandler(evt);
             return;
         }
-        this.trigger((evt.type === CLICK) ? 'click' : 'tap');
+        this.trigger(CLICK);
     }
 
     element(): HTMLElement | null {

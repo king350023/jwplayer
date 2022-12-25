@@ -76,8 +76,7 @@
     }
 
     .jw-spacer {
-        flex: 1 1 auto;
-        align-self: stretch;
+        margin: 0 auto;
     }
 
     .jw-icon.jw-button-color {
@@ -94,7 +93,7 @@
     flex-flow: row nowrap;
     flex: 1 1 auto;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     width: 100%;
     padding: 0 12px;
 }
@@ -158,6 +157,10 @@
         height: 24px;
         cursor: pointer;
     }
+}
+
+.jw-fullscreen-ima {
+    display: none;
 }
 
 .jw-icon-inline.jw-icon-volume {
@@ -264,3 +267,8 @@
     }
 }
 
+.jwplayer:not(.jw-flag-fullscreen) {
+    .jw-fullscreen-disallowed {
+        display: none;
+    }
+}

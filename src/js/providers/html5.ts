@@ -68,8 +68,20 @@ interface HTML5Provider extends ProviderWithMixins {
     startDateTime: number;
     setStartDateTime: (time: number) => void;
     videoLoad: (this: HTMLVideoElement) => void;
+    muteToggle: boolean;
     fairplay?: unknown;
 }
+
+type WebkitHTMLVideoElement = HTMLVideoElement & {
+    // eslint-disable-next-line no-undef
+    readonly audioTracks?: AudioTrackList;
+    webkitEnterFullScreen?(): void;
+    webkitEnterFullscreen?(): void;
+    webkitExitFullScreen?(): void;
+    webkitExitFullscreen?(): void;
+    webkitDisplayingFullscreen?: boolean;
+    webkitSupportsFullscreen?: boolean;
+};
 
 function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: GenericObject, mediaElement: HTMLVideoElement): void {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -88,9 +100,13 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
     _this.retries = 0;
     _this.maxRetries = 3;
 
-    let { loadAndParseHlsMetadata, minDvrWindow } = _playerConfig;
+    // Toggle for a bug in iOS and Safari where you are unable to seek in initially muted streams
+    _this.muteToggle = OS.iOS || Browser.safari;
 
+    const loadAndParseHlsMetadata = _playerConfig.loadAndParseHlsMetadata;
     _this.loadAndParseHlsMetadata = loadAndParseHlsMetadata === undefined ? true : !!loadAndParseHlsMetadata;
+
+    let minDvrWindow = _playerConfig.minDvrWindow;
 
     // Always render natively in iOS and Safari, where HLS is supported.
     // Otherwise, use native rendering when set in the config for browsers that have adequate support.
@@ -108,6 +124,11 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
     const MediaEvents = {
         progress(this: ProviderWithMixins): void {
             VideoEvents.progress.call(_this);
+            // Workaround for an issue in Safari 14 that causes muted, autostarted HLS streams to infinitely buffer.
+            // Bug Report: https://feedbackassistant.apple.com/feedback/9097587
+            if (isAudioStream()) {
+                _toggleMute();
+            }
             checkStaleStream();
         },
 
@@ -169,6 +190,9 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
         },
 
         canplay(this: ProviderWithMixins): void {
+            if (_canSeek) {
+                return;
+            }
             _canSeek = true;
             if (!_androidHls) {
                 _setMediaType();
@@ -178,15 +202,22 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
         },
 
         seeking(this: ProviderWithMixins): void {
+            const timeBeforeSeek = _timeBeforeSeek as number;
             const offset = _seekToTime !== null ? timeToPosition(_seekToTime) : _this.getCurrentTime();
-            const position = timeToPosition(_timeBeforeSeek as number);
+            const position = timeToPosition(timeBeforeSeek);
             _timeBeforeSeek = _seekToTime;
             _seekToTime = null;
             _delayedSeek = 0;
             _this.seeking = true;
             _this.trigger(MEDIA_SEEK, {
                 position,
-                offset
+                offset,
+                duration: _this.getDuration(),
+                currentTime: timeBeforeSeek,
+                seekRange: _this.getSeekRange(),
+                metadata: {
+                    currentTime: timeBeforeSeek
+                }
             });
         },
 
@@ -297,8 +328,9 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
             _canSeek = false;
             // If we were mid-seek when detached, we want to allow it to resume
             this.seeking = false;
+
             // In case the video tag was modified while we shared it
-            _videotag.loop = false;
+            _videotag.loop = !!_playerConfig.loop;
 
             // override load so that it's not used to reset the video tag by external JavaScript (iOS ads)
             if (OS.iOS && !this.videoLoad) {
@@ -335,7 +367,7 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
         }
     });
 
-    const _videotag = mediaElement;
+    const _videotag: WebkitHTMLVideoElement = mediaElement;
     // wait for maria's quality level changes to merge
     const visualQuality: GenericObject = { level: {} };
     // Prefer the config timeout, which is allowed to be 0 and null by default
@@ -705,7 +737,7 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
         }
         _beforeResumeHandler = noop;
         _removeListeners(MediaEvents, _videotag);
-        _this.removeTracksListener(_videotag.audioTracks, 'change', _audioTrackChangeHandler);
+        _this.removeTracksListener(_videotag.audioTracks as any, 'change', _audioTrackChangeHandler);
         _this.removeTracksListener(textTracks, 'change', textTrackChangeHandler);
         _this.removeTracksListener(textTracks, 'addtrack', addTrackHandler);
         if (cueChangeHandler) {
@@ -747,6 +779,9 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
 
     this.load = function(item: PlaylistItem): void {
         setPlaylistItem(item);
+
+        _videotag.loop = !!_playerConfig.loop;
+
         _completeLoad(item.starttime);
         this.setupSideloadedTracks(item.tracks);
     };
@@ -790,6 +825,7 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
             _canSeek = !!_getSeekableEnd();
         }
         if (_canSeek) {
+            _toggleMute();
             _delayedSeek = 0;
             // setting currentTime can throw an invalid DOM state exception if the video is not ready
             try {
@@ -820,8 +856,9 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
 
     function _audioTrackChangeHandler(): void {
         let _selectedAudioTrackIndex = -1;
-        for (let i = 0; i < _videotag.audioTracks.length; i++) {
-            if (_videotag.audioTracks[i].enabled) {
+        const tracks = _videotag.audioTracks as any;
+        for (let i = 0; i < tracks.length; i++) {
+            if (tracks[i].enabled) {
                 _selectedAudioTrackIndex = i;
                 break;
             }
@@ -943,7 +980,8 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
 
     this.getCurrentAudioTrack = _getCurrentAudioTrack;
 
-    function _setAudioTracks(tracks: AudioTrackList): void {
+    // eslint-disable-next-line no-undef
+    function _setAudioTracks(tracks: AudioTrackList | undefined): void {
         _audioTracks = null;
         if (!tracks) {
             return;
@@ -959,7 +997,7 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
                 _currentAudioTrackIndex = 0;
                 tracks[_currentAudioTrackIndex].enabled = true;
             }
-            _audioTracks = map(tracks, function(track: AudioTrack): SimpleAudioTrack {
+            _audioTracks = map(tracks as any[], function(track: any): SimpleAudioTrack {
                 const _track = {
                     name: track.label || track.language,
                     language: track.language
@@ -967,7 +1005,7 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
                 return _track;
             });
         }
-        _this.addTracksListener(tracks, 'change', _audioTrackChangeHandler);
+        _this.addTracksListener(tracks as any, 'change', _audioTrackChangeHandler);
         if (_audioTracks) {
             _this.trigger(AUDIO_TRACKS, { currentTrack: _currentAudioTrackIndex, tracks: _audioTracks });
         }
@@ -993,7 +1031,7 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
     }
 
     function isAudioStream(): boolean | undefined {
-        if (_videotag.readyState < 2) {
+        if (_videotag.readyState < 2 && _videotag.buffered.length === 0) {
             return;
         }
 
@@ -1001,10 +1039,34 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
     }
 
     function _setMediaType(): void {
-        let isAudio = isAudioStream();
+        const isAudio = isAudioStream();
         if (typeof isAudio !== 'undefined') {
             const mediaType = isAudio ? 'audio' : 'video';
             _this.trigger(MEDIA_TYPE, { mediaType });
+        }
+    }
+
+    // Workaround for a bug in iOS and Safari where you are unable to seek in initially muted streams
+    // Bug Report: https://feedbackassistant.apple.com/feedback/9070511
+    function _toggleMute(): void {
+        if (_this.muteToggle && _videotag.muted) {
+            const isAudio = isAudioStream();
+            if (typeof isAudio === 'undefined') {
+                return;
+            }
+            const isPlaying = !_videotag.paused;
+            _videotag.muted = _this.muteToggle = false;
+            if (isAudio) {
+                // For audio-only set muted back to player config value
+                _videotag.muted = _playerConfig.mute;
+            } else {
+                // Only re-mute and resume if media has video (autoplay muted)
+                _videotag.muted = true;
+                // Autostart players may be paused after toggle
+                if (isPlaying && _videotag.paused) {
+                    _videotag.play();
+                }
+            }
         }
     }
 
@@ -1020,7 +1082,7 @@ function VideoProvider(this: HTML5Provider, _playerId: string, _playerConfig: Ge
         // Don't end if we have noting buffered yet, or cannot get any information about the buffer
         if (live && endOfBuffer && _lastEndOfBuffer === endOfBuffer) {
             if (_staleStreamTimeout === -1) {
-                _staleStreamTimeout = setTimeout(function(): void {
+                _staleStreamTimeout = window.setTimeout(function(): void {
                     _stale = true;
                     checkStreamEnded();
                 }, _staleStreamDuration);

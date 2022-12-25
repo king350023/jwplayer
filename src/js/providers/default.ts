@@ -23,7 +23,7 @@ export type SeekRange = {
     end: number;
 };
 
-type MetadataType = 'media' | 'id3' | 'emsg' | 'date-range' | 'program-date-time' | 'scte-35' | 'discontinuity';
+export type MetadataType = 'media' | 'id3' | 'emsg' | 'date-range' | 'program-date-time' | 'scte-35' | 'discontinuity';
 
 export type ProviderEvents = {
     [Event.PLAYER_STATE]: {
@@ -78,6 +78,12 @@ export type ProviderEvents = {
     [Event.MEDIA_SEEK]: {
         position: number;
         offset: number;
+        duration: number;
+        currentTime: number;
+        seekRange: SeekRange;
+        metadata: {
+            currentTime: number;
+        };
     };
     [Event.MEDIA_RATE_CHANGE]: {
         playbackRate: number;
@@ -133,8 +139,6 @@ export type ProviderEvents = {
     [Event.CLICK]: Event;
     [Event.WARNING]: PlayerError;
     [Event.MEDIA_ERROR]: PlayerError;
-    flashThrottle: { value: any };
-    flashBlocked: { value: any };
 }
 
 type ProviderEventNotifications = {
@@ -147,7 +151,7 @@ type ProviderEventNotifications = {
 interface InternalProvider {
     state?: string;
     video: HTMLVideoElement;
-    instreamMode: boolean;
+    instreamMode?: boolean;
     supportsPlaybackRate: boolean;
     seeking: boolean;
     stallTime: number;
@@ -172,7 +176,7 @@ interface InternalProvider {
 
     seek: (seekPos: number) => void;
 
-    setVisibility: (isVisible: boolean) => void;
+    setVisibility?: (isVisible: boolean) => void;
 
     setFullscreen: (isFullscreen: boolean) => void;
     getFullscreen: () => boolean;
@@ -227,8 +231,6 @@ export type AllProviderEventsListener = <E extends keyof AllProviderEvents>(type
 
 export type ProviderWithMixins = TracksMixin & VideoActionsInt & VideoAttachedInt & ImplementedProvider & {
     drmUsed?: 'widevine' | 'playready' | 'clearkey' | null;
-    // Providers can implement this method to add the invoked return value on "time" events `metadata.mpegts` property.
-    getPtsOffset?(): number;
 };
 
 interface DefaultProvider {
@@ -275,7 +277,6 @@ interface DefaultProvider {
     getPlaybackRate: () => number;
     getBandwidthEstimate: () => number | null;
     getLiveLatency: () => number | null;
-    setControls: () => void;
 
     attachMedia: () => void;
     detachMedia: () => void;
@@ -307,6 +308,8 @@ interface DefaultProvider {
  * @property {number} [bitrate]
  */
 
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 const DefaultProvider: DefaultProvider = {
     // This function is required to determine if a provider can work on a given source
     supports: returnFalse,
@@ -364,9 +367,6 @@ const DefaultProvider: DefaultProvider = {
     getLiveLatency(): number | null {
         return null;
     },
-
-    // TODO: Deprecate provider.setControls(bool) with Flash. It's used to toggle the cursor when the swf is in focus.
-    setControls: noop,
 
     attachMedia: noop,
     detachMedia: noop,

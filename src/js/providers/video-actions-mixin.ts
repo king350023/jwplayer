@@ -43,12 +43,17 @@ const VideoActionsMixin: VideoActionsInt = {
             width: '',
             height: ''
         };
+        const aspectPlayer = width / height;
+        const aspectVideo = videoWidth / videoHeight;
         if (stretching === 'uniform') {
-            // Snap video to edges when the difference in aspect ratio is less than 9% and perceivable
-            const playerAspectRatio = width / height;
-            const videoAspectRatio = videoWidth / videoHeight;
-            const edgeMatch = Math.abs(playerAspectRatio - videoAspectRatio);
-            if (edgeMatch < 0.09 && edgeMatch > 0.0025) {
+            // Snap video to edges to eliminate letterboxing of less than 3px on either edge
+            let letterBarPixels;
+            if (aspectPlayer > aspectVideo) {
+                letterBarPixels = width - width / (aspectPlayer / aspectVideo);
+            } else {
+                letterBarPixels = height - height / (aspectVideo / aspectPlayer);
+            }
+            if (letterBarPixels < 6) {
                 styles.objectFit = 'fill';
                 stretching = 'exactfit';
             }
@@ -57,12 +62,10 @@ const VideoActionsMixin: VideoActionsInt = {
         // object-fit is not implemented in IE or Android Browser in 4.4 and lower
         // http://caniuse.com/#feat=object-fit
         // feature detection may work for IE but not for browsers where object-fit works for images only
-        const fitVideoUsingTransforms = Browser.ie || (OS.iOS && OS.version.major < 9) || Browser.androidNative;
+        const fitVideoUsingTransforms = Browser.ie || (OS.iOS && (OS.version.major || 0) < 9) || Browser.androidNative;
         if (fitVideoUsingTransforms) {
             if (stretching !== 'uniform') {
                 styles.objectFit = 'contain';
-                const aspectPlayer = width / height;
-                const aspectVideo = videoWidth / videoHeight;
                 // Use transforms to center and scale video in container
                 let scaleX = 1;
                 let scaleY = 1;

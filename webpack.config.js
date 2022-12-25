@@ -4,10 +4,11 @@
 /* eslint no-process-env: 0 */
 
 const webpack = require('webpack');
-const merge = require('webpack-merge');
+const {merge} = require('webpack-merge');
 const addNamed = require('@babel/helper-module-imports').addNamed;
 const getBuildVersion = require('./build.version.js');
 const licensesNotice = require('./jwplayer.license.notice.js');
+const CleanCSSPlugin = require('less-plugin-clean-css');
 
 const compileConstants = {
     __SELF_HOSTED__: true,
@@ -15,7 +16,6 @@ const compileConstants = {
     __DEBUG__: false,
     __HEADLESS__: false,
     __BUILD_VERSION__: `'${getBuildVersion()}'`,
-    __FLASH_VERSION__: 18
 };
 
 const webpackConfig = {
@@ -48,7 +48,7 @@ const webpackConfig = {
             {
                 test: /\.less$/,
                 use: [
-                    'simple-style-loader',
+                    'style-loader',
                     {
                         loader: 'css-loader',
                         options: {
@@ -59,9 +59,13 @@ const webpackConfig = {
                     {
                         loader: 'less-loader',
                         options: {
-                            compress: true,
-                            strictMath: true,
-                            noIeCompat: true
+                            lessOptions: {
+                                plugins: [
+                                    new CleanCSSPlugin({compatibility: '*'})
+                                ],
+                                strictMath: true,
+                                noIeCompat: true
+                            }
                         }
                     }
                 ]
@@ -115,7 +119,7 @@ const configVariants = [
         devtool: 'cheap-module-source-map',
         output: {
             path: `${__dirname}/bin-debug/`,
-            sourceMapFilename: '[name].[hash].map',
+            sourceMapFilename: '[name].[fullhash].map',
             pathinfo: true
         },
         plugins: [
@@ -138,10 +142,21 @@ const configVariants = [
 
 module.exports = (envArgs) => {
     if (envArgs) {
-        const variantName = Object.keys(envArgs)[0];
-        const selected = configVariants.find(variant => variant.name === variantName);
-        if (selected) {
-            return merge(webpackConfig, selected);
+
+        const selectedVariants = []
+
+        Object.keys(envArgs).forEach(function(envKey) {
+            for (let i = 0; i < configVariants.length; i++) {
+                const variant = configVariants[i];
+
+                if (envKey === variant.name) {
+                    selectedVariants.push(variant);
+                }
+            }
+        });
+
+        if (selectedVariants.length) {
+            return selectedVariants.map(variant => merge(webpackConfig, variant));
         }
     }
     return configVariants.map(variant => merge(webpackConfig, variant));

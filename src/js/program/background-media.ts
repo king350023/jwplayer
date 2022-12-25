@@ -11,13 +11,8 @@ interface BackgroundMedia {
     isNext: (item: Item) => boolean;
     updateNext: (item: Item) => void;
     clearNext: () => void;
-    nextLoadPromise: {
-        get: () => Promise<MediaController> | null;
-    };
-    currentMedia: {
-        get: () => MediaController;
-        set: (mediaController: MediaController) => void;
-    };
+    nextLoadPromise: Promise<MediaController> | null;
+    currentMedia: MediaController;
 }
 /**
  * A simple data structure for containing both of the background loading objects.
@@ -33,11 +28,12 @@ interface BackgroundMedia {
  * @property {Promise} nextMedia - A promise representing the media loading in the background. Resolves with the mediaController.
  * @constructor
  */
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export default function BackgroundMedia(): BackgroundMedia {
     let currentMedia: MediaController | null = null;
     let nextMedia: MediaObject | null = null;
 
-    return Object.defineProperties({
+    return {
         setNext(item: Item, loadPromise: Promise<MediaController>): void {
             nextMedia = { item, loadPromise };
         },
@@ -51,20 +47,15 @@ export default function BackgroundMedia(): BackgroundMedia {
         },
         clearNext(): void {
             nextMedia = null;
-        }
-    }, {
-        nextLoadPromise: {
-            get(): Promise<MediaController> | null {
-                return nextMedia ? nextMedia.loadPromise : null;
-            }
         },
-        currentMedia: {
-            get(): MediaController | null {
+        get nextLoadPromise(): Promise<MediaController> | null {
+            return nextMedia ? nextMedia.loadPromise : null;
+        },
+        get currentMedia(): MediaController | null {
                 return currentMedia;
-            },
-            set(mediaController: MediaController | null): void {
-                currentMedia = mediaController;
-            }
+        },
+        set currentMedia(mediaController: MediaController | null) {
+            currentMedia = mediaController;
         }
-    });
+    };
 }

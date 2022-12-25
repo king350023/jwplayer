@@ -221,18 +221,18 @@ describe('languageUtils', function() {
             }
         }
 
-        it('should return the htlm lang attribute', function() {
+        it('should return the html lang attribute', function() {
             const htmlLanguage = 'htmlLanguage';
             stubHtmlLanguage(document, htmlLanguage);
             expect(getLanguage()).to.equal(htmlLanguage);
         });
 
-        it('should return the top htlm lang attribute when iframe has no lang attribute', function() {
+        it('should return the top html lang attribute when iframe has no lang attribute', function() {
+            Browser.isIframe.mock_ = true;
             const topHtmlLanguage = 'topHtmlLanguage';
-            stubHtmlLanguage(document, null);
             stubHtmlLanguage(window.top.document, topHtmlLanguage);
-            sandbox.stub(Browser, 'isIframe').returns(true);
             expect(getLanguage()).to.equal(topHtmlLanguage);
+            Browser.isIframe.mock_ = null;
         });
 
         it('should fallback to navigator.language when html lang attribute is absent', function() {
@@ -260,7 +260,7 @@ describe('languageUtils', function() {
                     code = 'no';
                 }
                 expect(languageCodes.indexOf(code) > -1);
-            }); 
+            });
         });
 
 
@@ -315,7 +315,7 @@ describe('languageUtils', function() {
                 expect(Object.keys(result.response)).to.deep.equal(Object.keys(en));
             });
         });
-     
+
         it('should fetch Norwegian for all appropriate language codes', function() {
             const checkCode = (code) => {
                 loadJsonTranslation('/base/test/files/', code).then(result => {
@@ -325,7 +325,7 @@ describe('languageUtils', function() {
                     expect(result).to.have.property('response').which.is.an('object');
                     expect(result).to.have.property('responseURL').which.contains('no.json');
                 });
-            }                
+            }
             checkCode('nb')
             checkCode('no');
             checkCode('nn');
@@ -432,7 +432,7 @@ describe('languageUtils', function() {
         });
 
         it('should only use custom localization block if "forceLocalizationDefaults" is true', function() {
-            sandbox.stub(Language, 'getLanguage').returns('fr');
+            getLanguage.mock_ = 'fr';
             const config = new Config({
                 forceLocalizationDefaults: true,
                 localization,
@@ -450,6 +450,7 @@ describe('languageUtils', function() {
                 }
                 expect(configLocalization[key]).to.deep.equal(en[key]);
             });
+            getLanguage.mock_ = null;
         });
     });
 

@@ -43,11 +43,14 @@ const CoreShim = function(originalContainer) {
         'preload',
 
         // These should just update state that could be acted on later, but need to be queued given v7 model
+        'setAllowFullscreen',
         'setConfig',
         'setCurrentAudioTrack',
         'setCurrentCaptions',
         'setCurrentQuality',
         'setFullscreen',
+        'setPip',
+        'requestPip',
         'addButton',
         'removeButton',
         'castToggle',
@@ -115,7 +118,7 @@ Object.assign(CoreShim.prototype, {
                 mediaPool = SharedMediaPool(mediaPool.getPrimedElement(), mediaPool);
             }
 
-            const primeUi = new UI(getElementWindow(this.originalContainer)).once('gesture', () => {
+            const primeUi = this.primeUi = new UI(getElementWindow(this.originalContainer)).once('gesture', () => {
                 mediaPool.prime();
                 this.preload();
                 primeUi.destroy();
@@ -151,7 +154,7 @@ Object.assign(CoreShim.prototype, {
 
             // Assign CoreMixin.prototype (formerly controller) properties to this instance making api.core the controller
             Object.assign(this, CoreMixin.prototype);
-            this.setup(config, api, this.originalContainer, this._events, commandQueue, mediaPool);
+            this.playerSetup(config, api, this.originalContainer, this._events, commandQueue, mediaPool);
 
             const coreModel = this._model;
             // Switch the error log handlers after the real model has been set
@@ -178,12 +181,20 @@ Object.assign(CoreShim.prototype, {
         });
     },
     playerDestroy() {
+        if (this.destroy) {
+            // Destroy core player (controller.js) mixin
+            this.destroy();
+        }
         if (this.apiQueue) {
             this.apiQueue.destroy();
         }
 
         if (this.setup) {
             this.setup.destroy();
+        }
+
+        if (this.primeUi) {
+            this.primeUi.destroy();
         }
 
         // Removes the ErrorContainer if it has been shown
@@ -196,6 +207,7 @@ Object.assign(CoreShim.prototype, {
             this._model =
             this.modelShim =
             this.apiQueue =
+            this.primeUi =
             this.setup = null;
     },
     getContainer() {

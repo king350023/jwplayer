@@ -96,6 +96,9 @@ function View(_api, _model) {
     let _breakpoint = null;
     let _controls = null;
 
+    let _pipEnabled = false;
+    let _pipVideoListeners = null;
+
     function reasonInteraction() {
         return { reason: 'interaction' };
     }
@@ -196,7 +199,7 @@ function View(_api, _model) {
     this.responsiveListener = _responsiveListener;
 
     function _responsiveUpdate() {
-        if (!_this.isSetup) {
+        if (!_this.isSetup || floatingController.isInTransition()) {
             return;
         }
         _this.updateBounds();
@@ -322,6 +325,9 @@ function View(_api, _model) {
     };
 
     function updateVisibility() {
+        if (_model.get('pip')) {
+            return;
+        }
         _model.set('visibility', getVisibility(_model, _playerElement));
     }
 
@@ -329,6 +335,7 @@ function View(_api, _model) {
         this.updateBounds();
 
         _model.on('change:fullscreen', _fullscreen);
+        _model.on('change:pip', _pip);
         _model.on('change:activeTab', updateVisibility);
         _model.on('change:fullscreen', updateVisibility);
         _model.on('change:intersectionRatio', updateVisibility);
@@ -418,47 +425,39 @@ function View(_api, _model) {
                 _getCurrentElement().focus();
 
                 if (_controls) {
-                    if (settingsMenuVisible()) {
-                        _controls.settingsMenu.close();
-                    } else if (infoOverlayVisible()) {
-                        _controls.infoOverlay.close();
-                    } else {
-                        api.playToggle(reasonInteraction());
-                    }
-                }
-            },
-            tap: () => {
-                _this.trigger(DISPLAY_CLICK);
-                if (settingsMenuVisible()) {
-                    _controls.settingsMenu.close();
-                }
-                if (infoOverlayVisible()) {
-                    _controls.infoOverlay.close();
-                }
-                const state = model.get('state');
-
-                if (controls &&
-                    ((state === STATE_IDLE || state === STATE_COMPLETE) ||
-                    (model.get('instream') && state === STATE_PAUSED))) {
-                    api.playToggle(reasonInteraction());
-                }
-
-                if (controls && state === STATE_PAUSED) {
-                    // Toggle visibility of the controls when tapping the media
-                    // Do not add mobile toggle "jw-flag-controls-hidden" in these cases
-                    if (model.get('instream') || model.get('castActive') || (model.get('mediaType') === 'audio')) {
+                    if (OS.mobile) {
+                        const state = model.get('state');
+                        if (controls &&
+                            ((state === STATE_IDLE || state === STATE_COMPLETE) ||
+                            (model.get('instream') && state === STATE_PAUSED))) {
+                            api.playToggle(reasonInteraction());
+                        }
+                        if (controls && state === STATE_PAUSED) {
+                            // Toggle visibility of the controls when tapping the media
+                            // Do not add mobile toggle "jw-flag-controls-hidden" in these cases
+                            if (model.get('instream') || model.get('castActive') || (model.get('mediaType') === 'audio')) {
+                                return;
+                            }
+                            toggleClass(_playerElement, 'jw-flag-controls-hidden');
+                            if (_this.dismissible) {
+                                toggleClass(_playerElement, 'jw-floating-dismissible', hasClass(_playerElement, 'jw-flag-controls-hidden'));
+                            }
+                            _captionsRenderer.renderCues(true);
+                        } else {
+                            if (!_controls.showing) {
+                                _controls.userActive();
+                            } else {
+                                _controls.userInactive();
+                            }
+                        }
                         return;
                     }
-                    toggleClass(_playerElement, 'jw-flag-controls-hidden');
-                    if (_this.dismissible) {
-                        toggleClass(_playerElement, 'jw-floating-dismissible', hasClass(_playerElement, 'jw-flag-controls-hidden'));
-                    }
-                    _captionsRenderer.renderCues(true);
-                } else if (_controls) {
-                    if (!_controls.showing) {
-                        _controls.userActive();
+                    if (settingsMenuVisible()) {
+                        _controls.settingsMenu.close();
+                    } else if (model.get('displayStats')) {
+                        model.set('displayStats', false);
                     } else {
-                        _controls.userInactive();
+                        api.playToggle(reasonInteraction());
                     }
                 }
             },
@@ -506,7 +505,6 @@ function View(_api, _model) {
         });
         if (_this.isSetup && aspectratio && !model.get('isFloating')) {
             style(_playerElement, getPlayerSizeStyles(model, model.get('width')));
-            _responsiveUpdate();
         }
     }
 
@@ -550,6 +548,9 @@ function View(_api, _model) {
 
         controls.on('dismissFloating', () => {
             this.stopFloating(true);
+            if (_model.get('autoPause') && !_model.get('autoPause').pauseAds && !!_model.get('instream')) {
+                return;
+            }
             _api.pause({ reason: 'interaction' });
         });
 
@@ -650,6 +651,9 @@ function View(_api, _model) {
     }
 
     function _nativeFullscreenChangeHandler(event) {
+        if (!OS.mobile) {
+            return;
+        }
         toggleClass(_playerElement, 'jw-flag-ios-fullscreen', event.jwstate);
         _fullscreenChangeHandler(event);
     }
@@ -689,12 +693,15 @@ function View(_api, _model) {
 
     function _onMediaTypeChange(model, val) {
         const isAudioFile = (val === 'audio');
-        const provider = model.get('provider');
 
         toggleClass(_playerElement, 'jw-flag-media-audio', isAudioFile);
 
-        const isFlash = (provider && provider.name.indexOf('flash') === 0);
-        const element = (isAudioFile && !isFlash) ? _videoLayer : _videoLayer.nextSibling;
+        // get out of pip mode for audio
+        if (isAudioFile && model.get('pip')) {
+            model.set('pip', false);
+        }
+
+        const element = isAudioFile ? _videoLayer : _videoLayer.nextSibling;
         // Put the preview element before the media element in order to display browser captions
         // otherwise keep it on top of the media element to display captions with the captions renderer
         _preview.el.parentNode.insertBefore(_preview.el, element);
@@ -770,7 +777,7 @@ function View(_api, _model) {
 
     function setMediaTitleAttribute(model, playlistItem) {
         const videotag = model.get('mediaElement');
-        // chromecast and flash providers do no support video tags
+        // chromecast provider does not support video tags
         if (!videotag) {
             return;
         }
@@ -795,11 +802,6 @@ function View(_api, _model) {
     const settingsMenuVisible = () => {
         const settingsMenu = _controls && _controls.settingsMenu;
         return !!(settingsMenu && settingsMenu.visible);
-    };
-
-    const infoOverlayVisible = () => {
-        const info = _controls && _controls.infoOverlay;
-        return !!(info && info.visible);
     };
 
     const setupInstream = function() {
@@ -837,6 +839,64 @@ function View(_api, _model) {
 
         // reset display click handler
         displayClickHandler.revertAlternateClickHandlers();
+    };
+
+    const _pip = function(model, state) {
+        if (state) {
+            _this.requestPip();
+        } else if (document.pictureInPictureElement) {
+            document.exitPictureInPicture();
+        }
+    };
+
+    function removePipListeners() {
+        if (_pipVideoListeners) {
+            const { video, enter, leave } = _pipVideoListeners;
+            video.removeEventListener('loadedmetadata', enter);
+            video.removeEventListener('leavepictureinpicture', leave);
+        }
+    }
+
+    this.requestPip = function (videoElement) {
+        const video = videoElement || _model.get('mediaElement');
+        if (video.requestPictureInPicture) {
+            removePipListeners();
+            const enter = () => {
+                removePipListeners();
+                video.requestPictureInPicture().then(() => {
+                    if (!_pipEnabled) {
+                        _pipEnabled = true;
+                        _this.trigger('pipEnter', { video });
+                    }
+                    video.addEventListener('leavepictureinpicture', leave);
+                });
+                video.removeEventListener('loadedmetadata', enter);
+            };
+
+            // Video tag's leavepictureinpicture event listener
+            // Event triggered when exitPictureInPicture api is called or the close button on PiP display is clicked
+            const leave = () => {
+                video.removeEventListener('leavepictureinpicture', leave);
+                if (_pipEnabled) {
+                    _pipEnabled = false;
+                    _this.trigger('pipLeave', { video });
+                    // Set to handle the close button click
+                    _model.set('pip', false);
+                    if (document.pictureInPictureElement) {
+                        document.exitPictureInPicture();
+                    }
+                }
+            };
+
+            if (video.readyState) {
+                enter();
+            } else {
+                // Wait for the video tag to have loaded metadata to be able to turn pip mode on
+                video.addEventListener('loadedmetadata', enter);
+            }
+
+            _pipVideoListeners = { video, enter, leave };
+        }
     };
 
     this.setAltText = function (text) {

@@ -46,14 +46,23 @@ function coreFactory(api, element) {
  */
 function resetPlayer(api, core) {
     const plugins = api.plugins;
-    Object.keys(plugins).forEach(key => {
+    const pluginInstances = Object.keys(plugins).map(key => {
+        const instance = plugins[key];
         delete plugins[key];
+        return instance;
     });
     if (core.get('setupConfig')) {
         api.trigger('remove');
     }
     api.off();
     core.playerDestroy();
+    pluginInstances.forEach((instance) => {
+        if (instance.destroy) {
+            try {
+                instance.destroy();
+            } catch (e) {/* */}
+        }
+    });
     if (!__HEADLESS__) {
         core.getContainer().removeAttribute('data-jwplayer-id');
     }
@@ -222,8 +231,9 @@ export default function Api(element) {
         setup(options) {
             qoeTimer.clear('ready');
             qoeTimer.tick('setup');
-
-            resetPlayer(this, core);
+            if (core) {
+                resetPlayer(this, core);
+            }
             core = coreFactory(this, element);
             core.init(options, this);
 
@@ -238,11 +248,25 @@ export default function Api(element) {
          * @returns {Api} The Player API instance
          */
         remove() {
+            // disable pip if enabled
+            if (this.getPip()) {
+                this.setPip(false);
+            }
+
             // Remove from array of players
             removePlayer(this);
 
             // Unbind listeners and destroy controller/model/...
-            resetPlayer(this, core);
+            if (core) {
+                resetPlayer(this, core);
+                // The api should not throw even if it's methods are called after remove so leave core
+                // core = null;
+            }
+
+            // Clear this.plugins
+            Object.keys(pluginsMap).forEach((name) => {
+                delete pluginsMap[name];
+            });
 
             return this;
         },
@@ -457,6 +481,15 @@ export default function Api(element) {
          */
         getPercentViewable() {
             return core.get('visibility');
+        },
+
+        /**
+         * Gets the player's picture-in-picture mode.
+         * @returns {boolean} Whether or not the player is in picture-in-picture mode.
+         * @since v8.21.0
+         */
+        getPip() {
+            return core.get('pip');
         },
 
         /**
@@ -681,12 +714,32 @@ export default function Api(element) {
         },
 
         /**
+         * Sets whether or not to enable fullscreen capability/UI.
+         * @param {boolean} allowFullscreen - Specifies whether or not to enable fullscreen capability/UI.
+         * @returns {void}
+         */
+        setAllowFullscreen(allowFullscreen) {
+            core.setAllowFullscreen(allowFullscreen);
+            return this;
+        },
+
+        /**
          * Toggles the player's mute state.
          * @param {boolean} [toggle] - Specifies whether to mute or unmute the player.
          * @returns {Api} The Player API instance.
          */
         setMute(toggle) {
             core.setMute(toggle);
+            return this;
+        },
+
+        /**
+         * Toggles Picture-in-Picture mode.
+         * @param {boolean} [toggle] - Specifies whether to enable or disable PiP mode.
+         * @returns {Api} The Player API instance.
+         */
+        setPip(toggle) {
+            core.setPip(toggle);
             return this;
         },
 
@@ -849,6 +902,17 @@ export default function Api(element) {
         },
 
         /**
+         * Requests the player to go into picture-in-picture mode.
+         * @param { video } [target] - An optional video tag
+         * @returns {Api} The Player API instance.
+         * @since v8.21.0
+         */
+        requestPip(target) {
+            core.requestPip(target);
+            return this;
+        },
+
+        /**
          * Toggles the presence of the Airplay button in Safari (calls `HTMLMediaElement.webkitShowPlaybackTargetPicker`).
          * Does not affect the Chromecast button in Chrome.
          * @returns {Api} The Player API instance.
@@ -858,7 +922,7 @@ export default function Api(element) {
             return this;
         },
 
-         /**
+        /**
          * Stops casting immediately (Chromecast only).
          * @return {Api} The Player API instance.
          * @since v8.18.0
@@ -1107,11 +1171,11 @@ Object.assign(Api.prototype, /** @lends Api.prototype */ {
     addPlugin(name, pluginInstance) {
         this.plugins[name] = pluginInstance;
 
-        this.on('ready', pluginInstance.addToPlayer);
-
-        // A swf plugin may rely on resize events
-        if (pluginInstance.resize) {
-            this.on('resize', pluginInstance.resizeHandler);
+        if (!__HEADLESS__) {
+            this.on('ready', pluginInstance.addToPlayer);
+            if (pluginInstance.resize) {
+                this.on('resize', pluginInstance.resizeHandler);
+            }
         }
     },
 

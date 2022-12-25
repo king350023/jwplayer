@@ -90,6 +90,9 @@ export function sanitizeScriptNodes(element) {
     return element;
 }
 
+// Original: https://owasp.org/www-community/OWASP_Validation_Regex_Repository
+const validUrl = new RegExp(/^((((https?):\/\/)|(mailto:))(%[0-9A-Fa-f]{2}|[-()_.!~*';/?:@&=+$,A-Za-z0-9])+)([).!';/?:,][[:blank:|:blank:]])?$/);
+
 export function sanitizeElementAttributes(element) {
     const attributes = element.attributes;
     for (let i = attributes.length; i--;) {
@@ -99,8 +102,10 @@ export function sanitizeElementAttributes(element) {
         }
         if (/href/.test(name)) {
             const link = attributes[i].value;
-            if (/javascript:|javascript&colon;/.test(link)) {
+            if (/javascript:|javascript&colon;/.test(link) || !validUrl.test(link)) {
                 element.removeAttribute(name);
+            } else {
+                console.warn('Invalid or unsafe URL');
             }
         }
     }
@@ -249,11 +254,14 @@ export function previousSibling(element) {
     return element.previousElementSibling;
 }
 
-export function openLink(link, target, additionalOptions = {}) {
-    let a = document.createElement('a');
+export function openLink(link, target, additionalOptions = {}, doc = document) {
+    if (!validUrl.test(link)) {
+        return;
+    }
+    let a = doc.createElement('a');
     a.href = link;
     a.target = target;
-    a = Object.assign(a, additionalOptions);
+    a = sanitizeElementAttributes(Object.assign(a, additionalOptions));
 
     // Firefox is the only modern browser that doesn't support clicking orphaned anchors.
     if (Browser.firefox) {
@@ -270,4 +278,18 @@ export function deviceIsLandscape() {
         : false;
 
     return isLandscape || (window.orientation === 90 || window.orientation === -90);
+}
+
+// Removes all unallowed HTML tags/attributes from a template string. Useful for user created HTML.
+export function HTMLSafeString(str) {
+    return parseHTMLEntities(str).replace(/&|<|>|"|''/gm, function(character) {
+        return '&#' + character.charCodeAt(0) + ';';
+     }).replace(/&#60;(\/?)(b|strong|i|em|p|br|ul|ol|li|h.)&#62;/gmi, '<$1$2>');
+}
+
+function parseHTMLEntities(str) {
+    const textArea = document.createElement("textarea");
+     // eslint-disable-next-line no-unsanitized/property
+    textArea.innerHTML = str;
+    return textArea.value;
 }

@@ -23,14 +23,10 @@ class SettingsMenu extends Menu {
         this.controlbar = controlbar;
         this.closeButton = createCloseButton(this.el.querySelector(`.jw-${this.name}-topbar-buttons`), this.close, localization);
         this.backButtonTarget = null;
+        this.defaultChild = null;
         this.topbar = createTopbar(this);
         this.onDocumentClick = this.onDocumentClick.bind(this);
         this.addEventListeners();
-    }
-
-    get defaultChild() {
-        const { quality, captions, audioTracks, sharing, playbackRates } = this.children;
-        return quality || captions || audioTracks || playbackRates || sharing;
     }
 
     setupMenu(menuName, menuTitle, items, onItemSelect, defaultItemIndex, itemOptions) {
@@ -46,6 +42,10 @@ class SettingsMenu extends Menu {
             menu.createItems(items, onItemSelect, itemOptions), 
             defaultItemIndex
         );
+        const categoryButton = menu.categoryButton && menu.categoryButton.element();
+        if (this.buttonContainer.firstChild === categoryButton) {
+            this.defaultChild = menu;
+        }
     }
 
     onLevels(model, levels) {
@@ -170,6 +170,7 @@ class SettingsMenu extends Menu {
                     itemMenu.open, 
                     itemMenuTemplate
                 );
+                itemMenu.buttonContainer = item;
                 const items = itemMenu.createItems(
                     captionItem.options, 
                     (index) => {
@@ -307,6 +308,12 @@ class SettingsMenu extends Menu {
         if (this.visible) {
             return;
         }
+
+        const gearButton = this.controlbar.elements.settingsButton.element();
+        if (gearButton) {
+            gearButton.setAttribute('aria-expanded', true);
+        }
+
         this.el.parentNode.classList.add('jw-settings-open');
         this.trigger('visibility', { visible: true, evt });
         document.addEventListener('click', this.onDocumentClick);
@@ -315,17 +322,24 @@ class SettingsMenu extends Menu {
     }
 
     close(evt) {
+        const key = normalizeKey(evt && evt.sourceEvent && evt.sourceEvent.key);
+        const gearButton = this.controlbar.elements.settingsButton.element();
+        
+        if (gearButton) {
+            gearButton.setAttribute('aria-expanded', false);
+        }
+        
+        this.el.setAttribute('aria-expanded', 'false');
         this.el.parentNode.classList.remove('jw-settings-open');
+        
         this.trigger('visibility', { visible: false, evt });
         document.removeEventListener('click', this.onDocumentClick);
         this.visible = false;
         if (this.openMenus.length) {
             this.closeChildren();
         }
-
+        
         // If closed by keypress, focus appropriate element.
-        const key = normalizeKey(evt && evt.sourceEvent && evt.sourceEvent.key);
-        const gearButton = this.controlbar.elements.settingsButton.element();
         let focusEl;
 
         switch (key) {
@@ -340,6 +354,9 @@ class SettingsMenu extends Menu {
                     focusEl = previousSibling(gearButton);
                     break;
                 }
+                /* falls through */
+            case 'Enter':
+            case 'Esc':
                 focusEl = gearButton;
                 break;
             default:
@@ -366,6 +383,16 @@ class SettingsMenu extends Menu {
         if (controlBarButton) {
             const isVisible = !!children[menuName];
             controlBarButton.toggle(isVisible);
+        } else if (shouldShowGear) {
+            let childrenNames = Object.keys(this.children);
+            for (let i = 0; i < childrenNames.length; i++) {
+                let menu = this.children[childrenNames[i]];
+                let categoryButton = menu.categoryButton && menu.categoryButton.element();
+
+                if (this.buttonContainer.firstChild === categoryButton) {
+                    this.defaultChild = menu;
+                }
+            }
         }
     }
 

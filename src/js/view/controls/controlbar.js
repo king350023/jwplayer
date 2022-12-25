@@ -7,10 +7,12 @@ import VolumeTooltipIcon from 'view/controls/components/volumetooltipicon';
 import button from 'view/controls/components/button';
 import { SimpleTooltip } from 'view/controls/components/simple-tooltip';
 import Events from 'utils/backbone.events';
-import { prependChild, setAttribute, toggleClass, openLink } from 'utils/dom';
+import { isTizen } from 'utils/browser';
+import { prependChild, setAttribute, toggleClass, openLink, addClass } from 'utils/dom';
 import { timeFormat } from 'utils/parser';
 import UI from 'utils/ui';
 import { genId, FEED_SHOWN_ID_LENGTH } from 'utils/random-id-generator';
+import { addClickAction } from 'view/utils/add-click-action';
 
 function text(name, role) {
     const element = document.createElement('span');
@@ -38,7 +40,7 @@ function div(classes) {
 }
 
 function createCastButton(castToggle, localization) {
-    if (Browser.safari) {
+    if ('WebKitPlaybackTargetAvailabilityEvent' in window) {
         const airplayButton = button(
             'jw-icon-airplay jw-off',
             castToggle,
@@ -65,6 +67,22 @@ function createCastButton(castToggle, localization) {
         SimpleTooltip(element, 'chromecast', localization.cast);
 
         return castButton;
+    }
+}
+
+function createPipButton(pipIcon, pipToggle, localization) {
+    if (OS.mobile || pipIcon === 'disabled') {
+        return;
+    }
+    if (Browser.chrome && !isTizen() || Browser.edge || Browser.safari) {
+        const pipButton = button(
+            'jw-icon-pip jw-off',
+            pipToggle,
+            localization.pipIcon,
+            cloneIcons('pip-on,pip-off'));
+
+        SimpleTooltip(pipButton.element(), 'pip', localization.pipIcon);
+        return pipButton;
     }
 }
 
@@ -136,13 +154,12 @@ export default class Controlbar {
         const settingsButton = button('jw-icon-settings jw-settings-submenu-button', (event) => {
             this.trigger('settingsInteraction', 'quality', true, event);
         }, localization.settings, cloneIcons('settings'));
-        setAttribute(settingsButton.element(), 'aria-haspopup', 'true');
         setAttribute(settingsButton.element(), 'aria-controls', 'jw-settings-menu');
+        setAttribute(settingsButton.element(), 'aria-expanded', false);
 
         const captionsButton = button('jw-icon-cc jw-settings-submenu-button', (event) => {
             this.trigger('settingsInteraction', 'captions', false, event);
         }, localization.cc, cloneIcons('cc-off,cc-on'));
-        setAttribute(captionsButton.element(), 'aria-haspopup', 'true');
         setAttribute(captionsButton.element(), 'aria-controls', 'jw-settings-submenu-captions');
 
         const liveButton = button('jw-text-live', () => {
@@ -170,6 +187,12 @@ export default class Controlbar {
             cast: createCastButton(() => {
                 _api.castToggle();
             }, localization),
+            pip: createPipButton(_model.get('pipIcon'), () => {
+                _api.setPip();
+            }, localization),
+            imaFullscreen: button('jw-icon-fullscreen', () => {
+                _api.setFullscreen();
+            }, localization.fullscreen, cloneIcons('fullscreen-off,fullscreen-on')),
             fullscreen: button('jw-icon-fullscreen', () => {
                 _api.setFullscreen();
             }, localization.fullscreen, cloneIcons('fullscreen-off,fullscreen-on')),
@@ -216,7 +239,11 @@ export default class Controlbar {
         setAttribute(nextElement, 'dir', 'auto');
         SimpleTooltip(elements.rewind.element(), 'rewind', localization.rewind);
         SimpleTooltip(elements.settingsButton.element(), 'settings', localization.settings);
-        const fullscreenTip = SimpleTooltip(elements.fullscreen.element(), 'fullscreen', localization.fullscreen);
+        const fullscreenTips = [
+            SimpleTooltip(elements.fullscreen.element(), 'fullscreen', localization.fullscreen),
+            SimpleTooltip(elements.imaFullscreen.element())
+        ];
+        addClass(elements.imaFullscreen.element(), 'jw-fullscreen-ima');
 
         // Filter out undefined elements
         const buttonLayout = [
@@ -224,6 +251,7 @@ export default class Controlbar {
             elements.rewind,
             elements.next,
             elements.volumetooltip,
+            elements.imaFullscreen,
             elements.mute,
             elements.horizontalVolumeContainer,
             elements.alt,
@@ -235,6 +263,7 @@ export default class Controlbar {
             elements.cast,
             elements.captionsButton,
             elements.settingsButton,
+            elements.pip,
             elements.fullscreen
         ].filter(e => e);
 
@@ -257,8 +286,12 @@ export default class Controlbar {
         // Initial State
         elements.play.show();
         elements.fullscreen.show();
+        elements.imaFullscreen.show();
         if (elements.mute) {
             elements.mute.show();
+        }
+        if (elements.pip) {
+            elements.pip.show();
         }
 
         // Listen for model changes
@@ -270,12 +303,26 @@ export default class Controlbar {
         _model.change('duration', this.onDuration, this);
         _model.change('position', this.onElapsed, this);
         _model.change('fullscreen', (model, val) => {
-            const fullscreenElement = this.elements.fullscreen.element();
-            toggleClass(fullscreenElement, 'jw-off', val);
+            const fullscreenElements = [this.elements.fullscreen.element(), this.elements.imaFullscreen.element()];
 
-            const fullscreenText = model.get('fullscreen') ? localization.exitFullscreen : localization.fullscreen;
-            fullscreenTip.setText(fullscreenText);
-            setAttribute(fullscreenElement, 'aria-label', fullscreenText);
+            for (let i = 0; i < fullscreenElements.length; i++) {
+                const element = fullscreenElements[i];
+                toggleClass(fullscreenElements[i], 'jw-off', val);
+                const fullscreenText = model.get('fullscreen') ? localization.exitFullscreen : localization.fullscreen;
+                fullscreenTips[i].setText(fullscreenText);
+                setAttribute(element, 'aria-label', fullscreenText);
+            }
+        }, this);
+        _model.change('allowFullscreen', this.onAllowFullscreenToggle, this);
+        _model.change('pip', (model, val) => {
+            if (this.elements.pip) {
+                toggleClass(this.elements.pip.element(), 'jw-off', val);
+            }
+        }, this);
+        _model.change('mediaType', (model, val) => {
+            if (this.elements.pip) {
+                this.elements.pip.toggle(val !== 'audio');
+            }
         }, this);
         _model.change('streamType', this.onStreamTypeChange, this);
         _model.change('dvrLive', (model, dvrLive) => {
@@ -322,10 +369,9 @@ export default class Controlbar {
         }
 
         if (elements.cast && elements.cast.button) {
-            const castUi = elements.cast.ui.on('click tap enter', function(evt) {
-                // controlbar cast button needs to manually trigger a click
-                // on the native cast button for taps and enter key
-                if (evt.type !== 'click') {
+            const castUi = elements.cast.ui.on('click enter', function(evt) {
+                // Trigger a synthetic click if not triggered by click event
+                if (evt.type === 'keydown') {
                     elements.cast.button.click();
                 }
                 this._model.set('castClicked', true);
@@ -333,7 +379,7 @@ export default class Controlbar {
             this.ui.push(castUi);
         }
 
-        const durationUi = new UI(elements.duration).on('click tap enter', function () {
+        const durationUi = addClickAction(elements.duration, function () {
             if (this._model.get('streamType') === 'DVR') {
                 // Seek to "Live" position within live buffer, but not before current position
                 const currentPosition = this._model.get('position');
@@ -344,7 +390,7 @@ export default class Controlbar {
         this.ui.push(durationUi);
 
         // When the control bar is interacted with, trigger a user action event
-        const controlbarUi = new UI(this.el).on('click tap drag', function () {
+        const controlbarUi = new UI(this.el).on('click drag', function () {
             this.trigger(USER_ACTION);
         }, this);
         this.ui.push(controlbarUi);
@@ -391,6 +437,10 @@ export default class Controlbar {
 
     onCastActive(model, val) {
         this.elements.fullscreen.toggle(!val);
+        this.elements.imaFullscreen.toggle(!val);
+        if (this.elements.pip) {
+            this.elements.pip.toggle(!val);
+        }
         if (this.elements.cast.button) {
             toggleClass(this.elements.cast.button, 'jw-off', !val);
         }
@@ -481,6 +531,12 @@ export default class Controlbar {
             }
         }
         setAttribute(this.elements.play.element(), 'aria-label', label);
+    }
+
+    onAllowFullscreenToggle(model, allowFullscreen) {
+        [this.elements.fullscreen.element(), this.elements.imaFullscreen.element()].forEach(element => {
+            toggleClass(element, 'jw-fullscreen-disallowed', !allowFullscreen);
+        });
     }
 
     onStreamTypeChange(model, streamType) {

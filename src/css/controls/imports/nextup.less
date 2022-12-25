@@ -60,7 +60,7 @@
 }
 
 .jw-nextup {
-    background: @nextup-body-background;
+    background: @overlay-background-color;
     border-radius: @nextup-border-radius;
     box-shadow: 0 0 10px fade(@black, 50%);
     color: @inactive-color;
@@ -162,4 +162,8 @@
     .jw-nextup-close {
         visibility: visible;
     }
+}
+
+.jw-nextup-firefox-pip-fix {
+    background: fade(@overlay-background-color, 100%);
 }
