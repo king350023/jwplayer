@@ -7,10 +7,11 @@
         "sourceMap": true,
         "strictNullChecks": true,
         "noImplicitThis": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
         "noUnusedLocals": true,
-        "strictPropertyInitialization": true,
         "noEmit": true,
-        "importsNotUsedAsValues": "error"
+        "verbatimModuleSyntax": true
     },
     "include": [
         "src/js"
